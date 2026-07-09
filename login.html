@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Login - CAF UCI Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { 'primary': '#416900', 'background': '#f8f9fa' } } } }
+    </script>
+</head>
+<body class="bg-background font-['Poppins'] text-zinc-900 h-screen flex items-center justify-center p-6">
+
+    <div class="bg-white w-full max-w-md p-10 rounded-[32px] shadow-2xl">
+        <div class="text-center mb-8">
+            <img src="logoUci.png" alt="Logo" class="h-12 mx-auto mb-4">
+            <h2 class="text-2xl font-bold">Area Amministrativa</h2>
+            <p class="text-zinc-500 text-sm">Accedi per gestire gli appuntamenti</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-bold text-zinc-400 mb-2 uppercase tracking-widest">Email</label>
+                <input type="email" id="login-email" class="w-full bg-zinc-50 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary" placeholder="admin@esempio.it">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-zinc-400 mb-2 uppercase tracking-widest">Password</label>
+                <input type="password" id="login-password" class="w-full bg-zinc-50 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary" placeholder="••••••••">
+            </div>
+            
+            <button onclick="eseguiLogin()" id="btn-login" class="w-full py-4 bg-primary text-white font-bold rounded-2xl hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                Accedi <span class="material-symbols-outlined text-sm">login</span>
+            </button>
+
+            <div class="text-center">
+                <button onclick="recuperaPassword()" class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest hover:text-primary transition-colors">
+                    Password dimenticata?
+                </button>
+            </div>
+            
+            <p id="login-error" class="text-red-500 text-xs text-center hidden font-bold"></p>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://vnpzggqebxcqbtwwwefv.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZucHpnZ3FlYnhjcWJ0d3d3ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MzkyNzYsImV4cCI6MjA4NDQxNTI3Nn0.tYYlfFfvLgF7vMxjMKTF-3Gt1F_XEkB_2A4tL_OeM5Y';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function eseguiLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorText = document.getElementById('login-error');
+            const btn = document.getElementById('btn-login');
+
+            if (!email || !password) {
+                errorText.innerText = "Inserisci tutte le credenziali.";
+                errorText.classList.remove('hidden');
+                return;
+            }
+
+            btn.innerHTML = 'Accesso in corso...';
+            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                errorText.innerText = "Errore: " + error.message;
+                errorText.classList.remove('hidden');
+                btn.innerHTML = 'Accedi <span class="material-symbols-outlined text-sm">login</span>';
+            } else {
+                window.location.href = 'admin.html';
+            }
+        }
+
+        async function recuperaPassword() {
+            const email = document.getElementById('login-email').value;
+            const errorText = document.getElementById('login-error');
+
+            if (!email) {
+                errorText.innerText = "Inserisci la tua email sopra per il recupero.";
+                errorText.classList.remove('hidden');
+                return;
+            }
+
+            const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/update-password.html',
+            });
+
+            if (error) {
+                alert("Errore: " + error.message);
+            } else {
+                alert("📩 Email di reset inviata! Controlla la tua posta.");
+            }
+        }
+    </script>
+</body>
+</html>

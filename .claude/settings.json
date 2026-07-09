@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(head -50 \"/Users/nricchiuti/Desktop/Animazione/Logo1x.svg\")",
+      "Read(//Users/nricchiuti/Desktop/Animazione/**)"
+    ]
+  }
+}

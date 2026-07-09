@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Privacy Policy - CAF UCI</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 'primary': '#416900', 'background': '#f8f9fa' }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-background font-['Poppins'] text-zinc-900 antialiased flex flex-col min-h-screen">
+
+    <!-- Navbar Semplificata -->
+    <nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md px-6 md:px-12 py-4 flex justify-between items-center shadow-sm border-b border-zinc-100">
+        <div class="flex items-center gap-4">
+            <img src="logoUci.png" alt="UCI Logo" class="h-10 w-auto object-contain">
+        </div>
+        <a href="index.html" class="text-sm font-bold text-zinc-500 hover:text-primary transition-colors flex items-center gap-1">
+            <span class="material-symbols-outlined text-lg">arrow_back</span>
+            Torna alla Home
+        </a>
+    </nav>
+
+    <!-- Contenuto Privacy Policy -->
+    <main class="pt-32 pb-20 px-6 md:px-12 max-w-4xl mx-auto flex-grow w-full">
+        <div class="bg-white p-8 md:p-12 rounded-[32px] shadow-sm border border-zinc-100">
+            <h1 class="text-3xl md:text-4xl font-headline font-extrabold text-zinc-800 mb-6">Informativa sulla Privacy</h1>
+            <p class="text-sm text-zinc-500 mb-10">Ultimo aggiornamento: Ottobre 2024</p>
+
+            <div class="space-y-8 text-zinc-700 leading-relaxed text-sm md:text-base">
+                
+                <section>
+                    <h2 class="text-xl font-bold text-primary mb-3">1. Titolare del Trattamento</h2>
+                    <p>Il Titolare del trattamento dei dati è il CAF Unione Coltivatori Italiani (UCI), con sede legale in [Inserire Indirizzo]. Puoi contattarci all'indirizzo email: [Inserire Email].</p>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-primary mb-3">2. Quali dati raccogliamo</h2>
+                    <p>Raccogliamo esclusivamente i dati necessari per la prenotazione dell'appuntamento, ovvero:</p>
+                    <ul class="list-disc list-inside mt-2 space-y-1 text-zinc-600">
+                        <li>Nome e Cognome</li>
+                        <li>Numero di telefono</li>
+                        <li>Indirizzo Email (opzionale)</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-primary mb-3">3. Finalità del Trattamento</h2>
+                    <p>I tuoi dati verranno utilizzati esclusivamente per gestire la tua prenotazione, confermare l'appuntamento o avvisarti di eventuali variazioni di orario.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-primary mb-3">4. Conservazione dei Dati</h2>
+                    <p>I dati forniti verranno conservati nei nostri database sicuri per il tempo strettamente necessario a completare il servizio richiesto e secondo gli obblighi di legge.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-primary mb-3">5. I tuoi Diritti</h2>
+                    <p>Ai sensi del GDPR (Regolamento UE 2016/679), hai il diritto di richiedere l'accesso, la rettifica o la cancellazione dei tuoi dati in qualsiasi momento scrivendo a [Inserire Email].</p>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-zinc-100 py-8 px-6 md:px-12 mt-auto text-center">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">&copy; 2024 UCI - Tutti i diritti riservati</p>
+    </footer>
+
+</body>
+</html>
