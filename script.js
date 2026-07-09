@@ -208,3 +208,11 @@ async function confermaPrenotazione() {
         Swal.fire({ icon: 'success', title: 'Prenotazione Confermata!', text: 'I tuoi dati sono stati salvati correttamente.', confirmButtonColor: '#416900' }).then(() => window.location.reload());
     }
 }
+// REGISTRAZIONE DEL SERVICE WORKER PER ABILITARE L'INSTALLAZIONE PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker registrato con successo!', reg))
+            .catch(err => console.error('Errore nella registrazione del Service Worker:', err));
+    });
+}
