@@ -140,11 +140,11 @@ function selezionaServizio(id, nome) {
     caricaSlotDisponibili();
 }
 
-// 5. Gestione e Generazione degli Orari (Filtro di Stato Solido)
+// 5. Gestione e Generazione degli Orari (Con controllo disponibilità in tempo reale)
 async function caricaSlotDisponibili() {
     const container = document.getElementById('slots-container');
     
-    // Se manca anche solo uno dei dati fondamentali, pulisci e nascondi tutto blindando la UI
+    // Se manca anche solo uno dei dati fondamentali, pulisci e nascondi tutto
     if (!prenotazione.servizio_id || !prenotazione.agente_id || !prenotazione.data) {
         container.innerHTML = '';
         container.classList.add('hidden');
@@ -153,16 +153,52 @@ async function caricaSlotDisponibili() {
         return;
     }
     
-    // Se ci sono tutti i dati, mostra e genera gli orari
+    // Mostra il contenitore con un piccolo messaggio di caricamento per l'utente
     container.classList.remove('hidden');
-    const slotFinti = ['09:00', '09:30', '10:00', '11:00', '11:30', '15:00', '16:00', '16:30'];
-    container.innerHTML = slotFinti.map(ora => `
-        <button type="button" onclick="selezionaOra('${ora}')" id="slot-${ora.replace(':','')}" class="py-2 px-4 rounded-xl border border-zinc-200 text-sm font-bold text-zinc-600 hover:border-primary hover:text-primary transition-colors">
-            ${ora}
-        </button>
-    `).join('');
+    container.innerHTML = '<p class="col-span-2 text-center text-sm text-zinc-500 py-4">Verifica disponibilità in corso...</p>';
     
-    // Reset preventivo dell'orario se si rigenerano gli slot
+    // --- CONNESSIONE AL DB: Recupero gli appuntamenti già fissati per questo agente in questa data ---
+    const { data: appuntamentiOccupati, error } = await _supabase
+        .from('appuntamenti')
+        .select('ora')
+        .eq('agente_id', prenotazione.agente_id)
+        .eq('data', prenotazione.data);
+        
+    // Estraiamo solo gli orari occupati in un array facile da leggere (es. ['10:30', '15:30'])
+    // Nota: Supabase salva l'ora come "10:30:00", quindi usiamo substring(0,5) per tagliare i secondi
+    let orariGiaPrenotati = [];
+    if (!error && appuntamentiOccupati) {
+        orariGiaPrenotati = appuntamentiOccupati.map(app => app.ora.substring(0, 5));
+    }
+
+    // ORARI UFFICIALI (Mattina 10-12, Pomeriggio 15:30-18:30 ogni 30 min)
+    const orariDisponibili = [
+        '10:00', '10:30', '11:00', '11:30', '12:00', 
+        '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
+    ];
+    
+    // Generiamo i bottoni. Se l'orario è nell'array 'orariGiaPrenotati', lo disegniamo spento!
+    container.innerHTML = orariDisponibili.map(ora => {
+        const isOccupato = orariGiaPrenotati.includes(ora);
+        
+        if (isOccupato) {
+            // BOTTONE SPENTO (Occupato)
+            return `
+                <button type="button" disabled title="Orario non disponibile" class="py-2 px-4 rounded-xl border border-zinc-100 bg-zinc-50 text-sm font-bold text-zinc-300 cursor-not-allowed line-through">
+                    ${ora}
+                </button>
+            `;
+        } else {
+            // BOTTONE ACCESO (Libero)
+            return `
+                <button type="button" onclick="selezionaOra('${ora}')" id="slot-${ora.replace(':','')}" class="py-2 px-4 rounded-xl border border-zinc-200 text-sm font-bold text-zinc-600 hover:border-primary hover:text-primary transition-colors">
+                    ${ora}
+                </button>
+            `;
+        }
+    }).join('');
+    
+    // Reset preventivo dell'orario prescelto
     prenotazione.ora = null;
     document.getElementById('summary-time').innerText = '-';
 }
