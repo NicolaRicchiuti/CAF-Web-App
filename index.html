@@ -2,11 +2,9 @@
 <html lang="it">
 <head>
     <meta charset="utf-8"/>
-    <!-- Viewport ottimizzato per le Web App su mobile -->
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
     <title>CAF Concierge - Prenota il tuo appuntamento</title>
 
-    <!-- TAG PER INSTALLAZIONE APP (PWA) -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#416900">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,65 +27,58 @@
         }
     </script>
 
-    <!-- Librerie esterne -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/it.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     <link rel="stylesheet" href="style.css">
     
     <style>
-        /* FIX: Centra il calendario su mobile per evitare tagli */
+        /* Centra il calendario su mobile per evitare tagli */
         @media screen and (max-width: 768px) {
-            .flatpickr-calendar {
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                width: 310px !important;
-                margin-top: 10px;
-            }
+            .flatpickr-calendar { left: 50% !important; transform: translateX(-50%) !important; width: 310px !important; margin-top: 10px; }
         }
     </style>
 </head>
 <body class="bg-background font-['Poppins'] text-zinc-900">
-    <!-- Main Container -->
     <div class="max-w-6xl mx-auto p-4 md:p-8">
         
-        <!-- Intestazione -->
         <header class="flex justify-between items-center mb-8">
             <img src="logoUci.png" alt="Logo CAF UCI" class="h-12">
             <div class="bg-primary-container text-white w-10 h-10 flex items-center justify-center rounded-full font-bold">US</div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <!-- Servizi (Main Content) -->
-            <main class="md:col-span-2 space-y-6">
-                <h1 class="text-2xl font-bold font-['Plus_Jakarta_Sans']">Seleziona il Servizio</h1>
-                <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Le card dei servizi verranno generate dinamicamente da JavaScript -->
-                </div>
+            
+            <main class="md:col-span-2 space-y-10">
+                
+                <section>
+                    <h1 class="text-2xl font-bold font-['Plus_Jakarta_Sans'] mb-4">1. Scegli il Consulente</h1>
+                    <div id="agents-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        </div>
+                </section>
+
+                <section id="services-section" class="hidden opacity-0 transition-opacity duration-500">
+                    <h1 class="text-2xl font-bold font-['Plus_Jakarta_Sans'] mb-4 border-t border-zinc-200 pt-8">2. Seleziona il Servizio</h1>
+                    <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        </div>
+                </section>
             </main>
 
-            <!-- Sidebar (Data e Orario) -->
-            <!-- FIX: Aggiunto mt-12 per distanziare il blocco dai servizi su mobile -->
             <aside class="sidebar-booking flex flex-col gap-8 mt-12 md:mt-0">
+                
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-zinc-100">
                     <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-center mb-4">Data e Orario</p>
-                    
                     <div class="mb-4 relative">
-                        <input type="text" id="booking-date" class="hidden" placeholder="Seleziona una data">
-                        <button id="date-trigger" onclick="document.getElementById('booking-date')._flatpickr.open()" class="w-full bg-zinc-50 border border-zinc-200 hover:border-primary transition-colors rounded-2xl py-4 px-4 text-center font-bold text-primary">Seleziona una data</button>
+                        <input type="text" id="booking-date" placeholder="Seleziona una data">
                     </div>
-                    
-                    <div id="slots-container" class="grid grid-cols-2 gap-2 mt-4 hidden">
-                        <!-- Gli slot orari verranno generati dinamicamente -->
-                    </div>
+                    <div id="slots-container" class="grid grid-cols-2 gap-2 mt-4 hidden"></div>
                 </div>
 
-                <!-- Dettagli e Conferma -->
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-zinc-100">
                     <h3 class="font-bold text-lg mb-4">Dettagli Appuntamento</h3>
                     <div class="space-y-2 text-sm text-zinc-600 mb-6">
+                        <p>Consulente: <span id="summary-agent" class="font-bold text-zinc-900">-</span></p>
                         <p>Servizio: <span id="summary-service" class="font-bold text-zinc-900">-</span></p>
                         <p>Data: <span id="summary-date" class="font-bold text-zinc-900">-</span></p>
                         <p>Ora: <span id="summary-time" class="font-bold text-zinc-900">-</span></p>
