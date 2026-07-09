@@ -1,0 +1,23 @@
+{
+  "name": "CAF Concierge UCI",
+  "short_name": "CAF UCI",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#416900",
+  "description": "Prenota il tuo appuntamento al CAF in pochi secondi",
+  "icons": [
+    {
+      "src": "logoUci.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logoUci.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -2,8 +2,17 @@
 <html lang="it">
 <head>
     <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <!-- Viewport ottimizzato per le Web App su mobile -->
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
     <title>CAF Concierge - Prenota il tuo appuntamento</title>
+
+    <!-- TAG PER INSTALLAZIONE APP (PWA) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#416900">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="CAF UCI">
+    <link rel="apple-touch-icon" href="logoUci.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
@@ -20,119 +29,82 @@
         }
     </script>
 
-    <!-- Librerie di base, Calendario e Notifiche SweetAlert2 -->
+    <!-- Librerie esterne -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/it.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* FIX: Centra il calendario su mobile per evitare tagli */
+        @media screen and (max-width: 768px) {
+            .flatpickr-calendar {
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                width: 310px !important;
+                margin-top: 10px;
+            }
+        }
+    </style>
 </head>
-<body class="bg-background font-['Poppins'] text-zinc-900 antialiased flex flex-col min-h-screen">
+<body class="bg-background font-['Poppins'] text-zinc-900">
+    <!-- Main Container -->
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        
+        <!-- Intestazione -->
+        <header class="flex justify-between items-center mb-8">
+            <img src="logoUci.png" alt="Logo CAF UCI" class="h-12">
+            <div class="bg-primary-container text-white w-10 h-10 flex items-center justify-center rounded-full font-bold">US</div>
+        </header>
 
-    <nav class="fixed top-0 w-full z-50 glass px-6 md:px-12 py-4 flex justify-between items-center shadow-sm">
-        <div class="flex items-center gap-4">
-            <img src="logoUci.png" alt="UCI Logo" class="h-12 w-auto object-contain">
-        </div>
-        <a href="admin.html" id="admin-link" title="Area Riservata" class="block w-9 h-9 rounded-full bg-zinc-200 overflow-hidden cursor-pointer hover:scale-105 transition-transform">
-            <img id="admin-avatar" src="https://ui-avatars.com/api/?name=US&background=80c41c&color=fff" alt="Profilo">
-        </a>
-    </nav>
-
-    <main class="pt-28 pb-32 px-6 md:px-12 max-w-[1440px] mx-auto flex-grow w-full">
-        <div class="main-wrapper">
-            <section class="flex flex-col gap-10">
-                <header>
-                    <h1 class="text-4xl md:text-5xl font-headline font-extrabold leading-tight mb-3 text-zinc-800">Prenota il tuo appuntamento</h1>
-                    <p class="text-zinc-500 text-base md:text-lg">Scegli un consulente per ricevere assistenza dedicata.</p>
-                </header>
-
-                <div>
-                    <label class="block text-[10px] font-bold text-zinc-400 tracking-[0.2em] mb-5 uppercase">I nostri consulenti</label>
-                    <div id="agent-grid" class="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto no-scrollbar snap-x pb-4"></div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Servizi (Main Content) -->
+            <main class="md:col-span-2 space-y-6">
+                <h1 class="text-2xl font-bold font-['Plus_Jakarta_Sans']">Seleziona il Servizio</h1>
+                <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Le card dei servizi verranno generate dinamicamente da JavaScript -->
                 </div>
+            </main>
 
-                <div class="animate-fade-in">
-                    <label class="block text-[10px] font-bold text-zinc-400 tracking-[0.2em] mb-5 uppercase">Servizio richiesto</label>
-                    <div id="service-list" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-                </div>
-            </section>
-
-            <aside class="sidebar-booking flex flex-col gap-8">
-                <div class="bg-white p-6 rounded-[32px] border border-zinc-100 shadow-sm relative">
-                    <label class="block text-[10px] font-bold text-zinc-400 tracking-widest mb-5 uppercase text-center italic">Data e Orario</label>
+            <!-- Sidebar (Data e Orario) -->
+            <!-- FIX: Aggiunto mt-12 per distanziare il blocco dai servizi su mobile -->
+            <aside class="sidebar-booking flex flex-col gap-8 mt-12 md:mt-0">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-zinc-100">
+                    <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-center mb-4">Data e Orario</p>
                     
-                    <div class="relative w-full mb-6" id="calendar-anchor">
-                        <button id="date-trigger" class="w-full bg-zinc-50 hover:bg-zinc-100 rounded-2xl py-4 font-bold text-primary flex items-center justify-center gap-2 transition-all border border-zinc-100 outline-none">
-                            <span class="material-symbols-outlined">calendar_month</span>
-                            Seleziona una data
-                        </button>
-                        <input type="text" id="booking-date" class="hidden">
+                    <div class="mb-4 relative">
+                        <input type="text" id="booking-date" class="hidden" placeholder="Seleziona una data">
+                        <button id="date-trigger" onclick="document.getElementById('booking-date')._flatpickr.open()" class="w-full bg-zinc-50 border border-zinc-200 hover:border-primary transition-colors rounded-2xl py-4 px-4 text-center font-bold text-primary">Seleziona una data</button>
                     </div>
-
-                    <div id="time-slots" class="grid grid-cols-3 gap-2"></div>
+                    
+                    <div id="slots-container" class="grid grid-cols-2 gap-2 mt-4 hidden">
+                        <!-- Gli slot orari verranno generati dinamicamente -->
+                    </div>
                 </div>
 
-                <div class="pt-8 border-t border-zinc-100 flex flex-col gap-6">
-                    <div class="flex justify-between items-end text-sm">
-                        <span id="summary-agent" class="font-bold text-zinc-800">-</span>
-                        <span id="summary-date" class="font-bold text-primary">-</span>
+                <!-- Dettagli e Conferma -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-zinc-100">
+                    <h3 class="font-bold text-lg mb-4">Dettagli Appuntamento</h3>
+                    <div class="space-y-2 text-sm text-zinc-600 mb-6">
+                        <p>Servizio: <span id="summary-service" class="font-bold text-zinc-900">-</span></p>
+                        <p>Data: <span id="summary-date" class="font-bold text-zinc-900">-</span></p>
+                        <p>Ora: <span id="summary-time" class="font-bold text-zinc-900">-</span></p>
                     </div>
-                    <button onclick="confermaPrenotazione()" class="w-full py-5 bg-primary text-white font-extrabold rounded-full btn-shadow text-lg flex items-center justify-center gap-3 active:scale-95 transition-all">
-                        Conferma Prenotazione
-                    </button>
+
+                    <div class="space-y-3">
+                        <input type="text" id="user-name" placeholder="Nome e Cognome" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary">
+                        <input type="tel" id="user-phone" placeholder="Numero di Telefono" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary">
+                        <input type="email" id="user-email" placeholder="Email" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+
+                    <button onclick="confermaPrenotazione()" id="btn-conferma" class="w-full bg-primary text-white font-bold py-4 rounded-2xl mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Conferma Prenotazione</button>
                 </div>
             </aside>
         </div>
-    </main>
-
-    <footer class="bg-white border-t border-zinc-100 py-12 px-6 md:px-12 mt-auto">
-        <div class="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-            <div class="flex items-center gap-4">
-                <img src="logoUci.png" alt="UCI Logo" class="h-8 grayscale opacity-50">
-                <span>Unione Coltivatori Italiani</span>
-            </div>
-            <p>&copy; 2024 UCI - Tutti i diritti riservati</p>
-            <div class="flex gap-6">
-                <!-- Link alla Privacy Policy aggiornato -->
-                <a href="privacy.html" target="_blank" class="hover:text-primary transition-colors">Privacy Policy</a>
-                <a href="#" class="hover:text-primary transition-colors">Termini</a>
-            </div>
-        </div>
-    </footer>
-
-    <!-- MODALE DI PRENOTAZIONE -->
-    <div id="booking-modal" class="fixed inset-0 z-[100] hidden flex items-end md:items-center justify-center p-4">
-        <div class="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm" onclick="chiudiModale()"></div>
-        <div class="relative bg-white w-full max-w-md p-8 md:rounded-[32px] rounded-t-[32px] shadow-2xl">
-            <h3 class="text-2xl font-headline font-extrabold text-zinc-800 mb-6">I tuoi dettagli</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-[10px] font-bold text-zinc-400 mb-2 uppercase">Nome e Cognome <span class="text-red-500">*</span></label>
-                    <input type="text" id="client-name" class="w-full bg-zinc-50 border-none rounded-xl py-4 px-5 text-zinc-800 outline-none" placeholder="Es. Mario Rossi">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-zinc-400 mb-2 uppercase">Email (Opzionale)</label>
-                    <input type="email" id="client-email" class="w-full bg-zinc-50 border-none rounded-xl py-4 px-5 text-zinc-800 outline-none" placeholder="mario@email.com">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-zinc-400 mb-2 uppercase">Cellulare <span class="text-red-500">*</span></label>
-                    <input type="tel" id="client-phone" class="w-full bg-zinc-50 border-none rounded-xl py-4 px-5 text-zinc-800 outline-none" placeholder="+39 333 1234567">
-                </div>
-            </div>
-            
-            <!-- CONTROLLO GDPR CON LINK AGGIORNATO -->
-            <div class="mt-6 flex items-start gap-3 bg-zinc-50 p-4 rounded-xl border border-zinc-100">
-                <input type="checkbox" id="privacy-policy" class="mt-1 w-5 h-5 accent-primary cursor-pointer rounded">
-                <label for="privacy-policy" class="text-xs text-zinc-600 cursor-pointer leading-relaxed">
-                    Dichiaro di aver letto l'<a href="privacy.html" target="_blank" class="text-primary font-bold underline">Informativa sulla Privacy</a> e acconsento al trattamento dei miei dati personali. <span class="text-red-500 font-bold">*</span>
-                </label>
-            </div>
-
-            <button onclick="inviaPrenotazioneDefinitiva(this)" class="w-full py-4 bg-primary text-white font-extrabold rounded-2xl mt-6 btn-shadow active:scale-95 transition-all">Completa Prenotazione</button>
-        </div>
     </div>
-
+    
     <script src="script.js"></script>
 </body>
 </html>
