@@ -6,7 +6,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let tuttiGliAppuntamenti = [];
 let appuntamentiFiltrati = [];
 let paginaCorrente = 1;
-const elementsPerPagina = 10; // Quanti appuntamenti mostrare per pagina
+const elementsPerPagina = 10; 
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await _supabase.auth.getSession();
@@ -37,10 +37,9 @@ async function caricaDashboard() {
     document.getElementById('count-pending').innerText = data.filter(a => a.stato === 'in attesa').length;
     document.getElementById('count-confirmed').innerText = data.filter(a => a.stato === 'confermato').length;
     
-    applicaFiltri(); // Invece di renderizzare tutto, passiamo dai filtri
+    applicaFiltri(); 
 }
 
-// LOGICA DI RICERCA E PAGINAZIONE
 function applicaFiltri() {
     const termineRicerca = document.getElementById('search-input').value.toLowerCase();
     
@@ -50,14 +49,13 @@ function applicaFiltri() {
         return nome.includes(termineRicerca) || tel.includes(termineRicerca);
     });
 
-    paginaCorrente = 1; // Resetta alla prima pagina quando si cerca qualcosa
+    paginaCorrente = 1; 
     gestisciPaginazione();
 }
 
 function gestisciPaginazione() {
     const totalePagine = Math.ceil(appuntamentiFiltrati.length / elementsPerPagina) || 1;
     
-    // Sicurezza: non andare oltre i limiti
     if (paginaCorrente < 1) paginaCorrente = 1;
     if (paginaCorrente > totalePagine) paginaCorrente = totalePagine;
 
@@ -77,7 +75,7 @@ function cambiaPagina(direzione) {
     gestisciPaginazione();
 }
 
-// RENDER TABELLA (Include ora il bottone magico per WhatsApp)
+// RENDER TABELLA (Calcola il link WhatsApp al volo per TUTTI i record)
 function renderizzaTabella(lista) {
     const tbody = document.getElementById('admin-table-body');
     
@@ -86,43 +84,57 @@ function renderizzaTabella(lista) {
         return;
     }
 
-    tbody.innerHTML = lista.map(app => `
-        <tr class="hover:bg-zinc-50 transition-colors animate-fade-in">
-            <td class="px-8 py-5">
-                <div class="font-bold text-zinc-800">${app.nome_cliente}</div>
-                <div class="text-[10px] text-zinc-400 font-medium">${app.telefono}</div>
-            </td>
-            <td class="px-8 py-5">
-                <div class="text-xs font-bold text-zinc-600 uppercase">${app.servizi?.nome}</div>
-                <div class="text-[10px] text-primary italic font-bold">${app.agenti?.nome}</div>
-            </td>
-            <td class="px-8 py-5 font-bold text-zinc-600">
-                ${new Date(app.data).toLocaleDateString('it-IT')} <span class="text-zinc-300 mx-1">|</span> ${app.ora.substring(0,5)}
-            </td>
-            <td class="px-8 py-5">
-                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${app.stato === 'confermato' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${app.stato}</span>
-            </td>
-            <td class="px-8 py-5 text-right">
-                <div class="flex justify-end items-center gap-1">
-                    <button onclick="apriModaleModifica('${app.id}', '${app.agente_id}', '${app.data}', '${app.ora}')" class="p-2 text-zinc-400 hover:text-blue-500 transition-colors" title="Modifica"><span class="material-symbols-outlined">edit</span></button>
-                    
-                    ${app.stato === 'in attesa' ? `<button onclick="cambiaStato('${app.id}', 'confermato')" class="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all" title="Conferma"><span class="material-symbols-outlined">check_circle</span></button>` : ''}
-                    
-                    <!-- 🟢 AGGIUNTA: Bottone per inviare il messaggio preimpostato su WhatsApp -->
-                    ${app.link_whatsapp ? `
-                        <a href="${app.link_whatsapp}" target="_blank" rel="noopener noreferrer" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all inline-flex items-center justify-center" title="Invia promemoria WhatsApp">
-                            <span class="material-symbols-outlined text-xl">chat</span>
-                        </a>
-                    ` : ''}
+    tbody.innerHTML = lista.map(app => {
+        // Generiamo il link al volo nel browser come paracadute per i vecchi test
+        let telPulito = (app.telefono || '').replace(/\D/g, '');
+        if (telPulito && !telPulito.startsWith('39')) {
+            telPulito = '39' + telPulito;
+        }
+        const dataIT = new Date(app.data).toLocaleDateString('it-IT');
+        const oraIT = app.ora.substring(0, 5);
+        const messaggio = `Gentile ${app.nome_cliente}, ti confermiamo l'appuntamento al CAF UCI per il giorno ${dataIT} alle ore ${oraIT}. A presto!`;
+        const linkFallback = telPulito ? `https://wa.me/${telPulito}?text=${encodeURIComponent(messaggio)}` : '#';
+        
+        // Usa il link salvato da Supabase, se manca usa quello generato al volo
+        const linkFinale = app.link_whatsapp || linkFallback;
 
-                    <button onclick="elimina('${app.id}')" class="p-2 text-red-300 hover:text-red-500 transition-colors" title="Elimina"><span class="material-symbols-outlined">delete</span></button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+        return `
+            <tr class="hover:bg-zinc-50 transition-colors animate-fade-in">
+                <td class="px-8 py-5">
+                    <div class="font-bold text-zinc-800">${app.nome_cliente}</div>
+                    <div class="text-[10px] text-zinc-400 font-medium">${app.telefono}</div>
+                </td>
+                <td class="px-8 py-5">
+                    <div class="text-xs font-bold text-zinc-600 uppercase">${app.servizi?.nome}</div>
+                    <div class="text-[10px] text-primary italic font-bold">${app.agenti?.nome}</div>
+                </td>
+                <td class="px-8 py-5 font-bold text-zinc-600">
+                    ${dataIT} <span class="text-zinc-300 mx-1">|</span> ${oraIT}
+                </td>
+                <td class="px-8 py-5">
+                    <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${app.stato === 'confermato' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${app.stato}</span>
+                </td>
+                <td class="px-8 py-5 text-right">
+                    <div class="flex justify-end items-center gap-1">
+                        <button onclick="apriModaleModifica('${app.id}', '${app.agente_id}', '${app.data}', '${app.ora}')" class="p-2 text-zinc-400 hover:text-blue-500 transition-colors" title="Modifica"><span class="material-symbols-outlined">edit</span></button>
+                        
+                        ${app.stato === 'in attesa' ? `<button onclick="cambiaStato('${app.id}', 'confermato')" class="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all" title="Conferma"><span class="material-symbols-outlined">check_circle</span></button>` : ''}
+                        
+                        ${telPulito ? `
+                            <a href="${linkFinale}" target="_blank" rel="noopener noreferrer" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all inline-flex items-center justify-center" title="Invia promemoria WhatsApp">
+                                <span class="material-symbols-outlined text-xl">chat</span>
+                            </a>
+                        ` : ''}
+
+                        <button onclick="elimina('${app.id}')" class="p-2 text-red-300 hover:text-red-500 transition-colors" title="Elimina"><span class="material-symbols-outlined">delete</span></button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
-async function cambiaStato(id, nuovo) { await _supabase.from('appuntamenti').update({ stato: nuevo }).eq('id', id); }
+async function cambiaStato(id, nuovo) { await _supabase.from('appuntamenti').update({ stato: nuovo }).eq('id', id); }
 
 async function elimina(id) {
     const result = await Swal.fire({ title: 'Sei sicuro?', text: "L'appuntamento verrà eliminato in modo definitivo!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#a1a1aa', confirmButtonText: 'Sì, elimina', cancelButtonText: 'Annulla' });
