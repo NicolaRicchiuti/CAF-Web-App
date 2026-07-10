@@ -6,7 +6,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let tuttiGliAppuntamenti = [];
 let appuntamentiFiltrati = [];
 let paginaCorrente = 1;
-const elementiPerPagina = 10; // Quanti appuntamenti mostrare per pagina
+const elementsPerPagina = 10; // Quanti appuntamenti mostrare per pagina
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await _supabase.auth.getSession();
@@ -55,7 +55,7 @@ function applicaFiltri() {
 }
 
 function gestisciPaginazione() {
-    const totalePagine = Math.ceil(appuntamentiFiltrati.length / elementiPerPagina) || 1;
+    const totalePagine = Math.ceil(appuntamentiFiltrati.length / elementsPerPagina) || 1;
     
     // Sicurezza: non andare oltre i limiti
     if (paginaCorrente < 1) paginaCorrente = 1;
@@ -65,8 +65,8 @@ function gestisciPaginazione() {
     document.getElementById('btn-prev').disabled = paginaCorrente === 1;
     document.getElementById('btn-next').disabled = paginaCorrente === totalePagine;
 
-    const indiceInizio = (paginaCorrente - 1) * elementiPerPagina;
-    const indiceFine = indiceInizio + elementiPerPagina;
+    const indiceInizio = (paginaCorrente - 1) * elementsPerPagina;
+    const indiceFine = indiceInizio + elementsPerPagina;
     const datiPagina = appuntamentiFiltrati.slice(indiceInizio, indiceFine);
 
     renderizzaTabella(datiPagina);
@@ -77,7 +77,7 @@ function cambiaPagina(direzione) {
     gestisciPaginazione();
 }
 
-// RENDER TABELLA (Ora riceve solo i 10 elementi della pagina corrente)
+// RENDER TABELLA (Include ora il bottone magico per WhatsApp)
 function renderizzaTabella(lista) {
     const tbody = document.getElementById('admin-table-body');
     
@@ -103,9 +103,18 @@ function renderizzaTabella(lista) {
                 <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${app.stato === 'confermato' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${app.stato}</span>
             </td>
             <td class="px-8 py-5 text-right">
-                <div class="flex justify-end gap-1">
+                <div class="flex justify-end items-center gap-1">
                     <button onclick="apriModaleModifica('${app.id}', '${app.agente_id}', '${app.data}', '${app.ora}')" class="p-2 text-zinc-400 hover:text-blue-500 transition-colors" title="Modifica"><span class="material-symbols-outlined">edit</span></button>
+                    
                     ${app.stato === 'in attesa' ? `<button onclick="cambiaStato('${app.id}', 'confermato')" class="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all" title="Conferma"><span class="material-symbols-outlined">check_circle</span></button>` : ''}
+                    
+                    <!-- 🟢 AGGIUNTA: Bottone per inviare il messaggio preimpostato su WhatsApp -->
+                    ${app.link_whatsapp ? `
+                        <a href="${app.link_whatsapp}" target="_blank" rel="noopener noreferrer" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all inline-flex items-center justify-center" title="Invia promemoria WhatsApp">
+                            <span class="material-symbols-outlined text-xl">chat</span>
+                        </a>
+                    ` : ''}
+
                     <button onclick="elimina('${app.id}')" class="p-2 text-red-300 hover:text-red-500 transition-colors" title="Elimina"><span class="material-symbols-outlined">delete</span></button>
                 </div>
             </td>
@@ -113,9 +122,7 @@ function renderizzaTabella(lista) {
     `).join('');
 }
 
-// ... Il resto delle funzioni (cambiaStato, elimina, apriModale, ecc.) rimane identico ...
-
-async function cambiaStato(id, nuovo) { await _supabase.from('appuntamenti').update({ stato: nuovo }).eq('id', id); }
+async function cambiaStato(id, nuovo) { await _supabase.from('appuntamenti').update({ stato: nuevo }).eq('id', id); }
 
 async function elimina(id) {
     const result = await Swal.fire({ title: 'Sei sicuro?', text: "L'appuntamento verrà eliminato in modo definitivo!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#a1a1aa', confirmButtonText: 'Sì, elimina', cancelButtonText: 'Annulla' });
