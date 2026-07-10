@@ -153,12 +153,51 @@
         </div>
     </div>
 
-    <footer class="bg-white border-t border-zinc-100 py-10 px-8 mt-auto text-center">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <img src="logoUci.png" alt="Logo" class="h-6 grayscale opacity-50">
-            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">&copy; 2024 UCI - Area Riservata Protetta</p>
+    <!-- NUOVO FOOTER A NORMA DI LEGGE CON INTEGRATA PRIVACY E COOKIE POLICY -->
+    <footer class="bg-white border-t border-zinc-100 py-10 px-8 mt-auto text-center md:text-left">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            
+            <!-- Lato Sinistro: Logo e Copyright -->
+            <div class="flex flex-col md:flex-row items-center gap-4">
+                <img src="logoUci.png" alt="Logo" class="h-6 grayscale opacity-50">
+                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                    &copy; 2026 UCI - Area Riservata Protetta
+                </p>
+            </div>
+
+            <!-- Lato Destro: Link Legali Dinamici di Iubenda -->
+            <div class="flex flex-wrap justify-center gap-6 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                
+                <!-- NOTA: Sostituisci "IL_TUO_ID" con l'ID numerico reale fornito da Iubenda -->
+                <a href="https://www.iubenda.com/privacy-policy/IL_TUO_ID" 
+                   class="iubenda-white iubenda-noiframe iubenda-embed hover:text-primary transition-colors" 
+                   title="Privacy Policy">
+                   Privacy Policy
+                </a>
+
+                <a href="https://www.iubenda.com/privacy-policy/IL_TUO_ID/cookie-policy" 
+                   class="iubenda-white iubenda-noiframe iubenda-embed hover:text-primary transition-colors" 
+                   title="Cookie Policy">
+                   Cookie Policy
+                </a>
+                
+            </div>
         </div>
     </footer>
+
+    <!-- 🛑 LO SCRIPT DI ATTIVAZIONE DI IUBENDA (Inserito subito prima della chiusura di </body>) -->
+    <script type="text/javascript">
+        (function (w, d) {
+            var loader = function () {
+                var s = d.createElement("script"), tag = d.getElementsByTagName("script")[0];
+                s.src = "https://cdn.iubenda.com/iubenda.js";
+                tag.parentNode.insertBefore(s, tag);
+            };
+            if (w.addEventListener) { w.addEventListener("load", loader, false); }
+            else if (w.attachEvent) { w.attachEvent("onload", loader); }
+            else { w.onload = loader; }
+        })(window, document);
+    </script>
 
     <script src="admin.js"></script>
 </body>
