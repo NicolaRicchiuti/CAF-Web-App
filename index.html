@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="CAF UCI">
     <link rel="apple-touch-icon" href="logoUci.png">
 
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=700;800&family=Poppins:wght=300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
@@ -31,7 +31,10 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/it.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Script di attivazione Privacy Governance Iubenda -->
     <script type="text/javascript" src="https://embeds.iubenda.com/widgets/1741966e-0149-4917-9294-a30375dd757b.js"></script>
+    
     <link rel="stylesheet" href="style.css">
     
     <style>
@@ -53,20 +56,20 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             
             <main class="md:col-span-2 space-y-10">
-                
+                <!-- 1. I Consulenti -->
                 <section>
                     <h1 class="text-2xl font-bold font-['Plus_Jakarta_Sans'] mb-4">1. Scegli il Consulente</h1>
-                    <div id="agents-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        </div>
+                    <div id="agents-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
                 </section>
 
+                <!-- 2. I Servizi -->
                 <section id="services-section" class="hidden opacity-0 transition-opacity duration-500">
                     <h1 class="text-2xl font-bold font-['Plus_Jakarta_Sans'] mb-4 border-t border-zinc-200 pt-8">2. Seleziona il Servizio</h1>
-                    <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        </div>
+                    <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
                 </section>
             </main>
 
+            <!-- Barra Laterale di Prenotazione -->
             <aside class="sidebar-booking flex flex-col gap-8 mt-12 md:mt-0">
                 
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-zinc-100">
@@ -86,22 +89,32 @@
                         <p>Ora: <span id="summary-time" class="font-bold text-zinc-900">-</span></p>
                     </div>
 
+                    <!-- Input Utente -->
                     <div class="space-y-3">
                         <input type="text" id="user-name" placeholder="Nome e Cognome" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary">
                         <input type="tel" id="user-phone" placeholder="Numero di Telefono" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary">
                         <input type="email" id="user-email" placeholder="Email" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary">
                     </div>
 
-                    <button onclick="confermaPrenotazione()" id="btn-conferma" class="w-full bg-primary text-white font-bold py-4 rounded-2xl mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Conferma Prenotazione</button>
+                    <!-- 🛠️ AGGIUNTA: Casella Spunta Privacy Legale di Iubenda -->
+                    <div class="privacy-container" style="margin: 20px 0 10px 0; text-align: left; display: flex; align-items: start; gap: 8px;">
+                        <input type="checkbox" id="accetta-privacy" name="privacy" required style="margin-top: 4px; cursor: pointer;">
+                        <label for="accetta-privacy" style="font-size: 13px; color: #4b5563; cursor: pointer; user-select: none; line-height: 1.4;">
+                            Accetto il trattamento dei dati personali secondo la 
+                            <a href="https://www.iubenda.com/privacy-policy/IL_TUO_ID_NUMERICO" class="iubenda-embed" title="Privacy Policy" target="_blank" style="text-decoration: underline; color: #416900; font-weight: bold;">Privacy Policy</a>.
+                        </label>
+                    </div>
+
+                    <button onclick="confermaPrenotazione()" id="btn-conferma" class="w-full bg-primary text-white font-bold py-4 rounded-2xl mt-4 shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Conferma Prenotazione</button>
                 </div>
             </aside>
         </div>
     </div>
-    <!-- FOOTER LEGALE PER LA PAGINA PUBBLICA DEI CITTADINI -->
+
+    <!-- FOOTER LEGALE -->
     <footer class="bg-white border-t border-zinc-100 py-10 px-8 mt-auto text-center md:text-left">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             
-            <!-- Lato Sinistro: Logo e Copyright -->
             <div class="flex flex-col md:flex-row items-center gap-4">
                 <img src="logoUci.png" alt="Logo" class="h-6 grayscale opacity-50">
                 <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
@@ -109,17 +122,16 @@
                 </p>
             </div>
 
-            <!-- Lato Destro: Link Legali Dinamici di Iubenda -->
+            <!-- Link Legali di Iubenda del Footer -->
             <div class="flex flex-wrap justify-center gap-6 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
                 
-                <!-- NOTA: Sostituisci "IL_TUO_ID" con l'ID reale quando configurerai Iubenda -->
-                <a href="https://www.iubenda.com/privacy-policy/IL_TUO_ID" 
+                <a href="https://www.iubenda.com/privacy-policy/IL_TUO_ID_NUMERICO" 
                    class="iubenda-white iubenda-noiframe iubenda-embed hover:text-primary transition-colors" 
                    title="Privacy Policy">
                    Privacy Policy
                 </a>
 
-                <a href="https://www.iubenda.com/privacy-policy/IL_TUO_ID/cookie-policy" 
+                <a href="https://www.iubenda.com/privacy-policy/IL_TUO_ID_NUMERICO/cookie-policy" 
                    class="iubenda-white iubenda-noiframe iubenda-embed hover:text-primary transition-colors" 
                    title="Cookie Policy">
                    Cookie Policy
@@ -129,7 +141,7 @@
         </div>
     </footer>
 
-    <!-- 🛑 LO SCRIPT DI ATTIVAZIONE DI IUBENDA (Indispensabile per far funzionare i link sopra) -->
+    <!-- Script di caricamento globale Iubenda -->
     <script type="text/javascript">
         (function (w, d) {
             var loader = function () {
