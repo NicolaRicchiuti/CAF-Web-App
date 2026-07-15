@@ -255,6 +255,7 @@ async function confermaPrenotazione() {
                 nome: nome,
                 email: email,
                 servizio: nomeServizio,
+                telefono:telefono,
                 agente: nomeAgente,
                 data: prenotazione.data,
                 ora: prenotazione.ora
