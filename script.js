@@ -241,11 +241,12 @@ async function confermaPrenotazione() {
         return Swal.fire({ icon: 'error', title: 'Errore', text: error.message, confirmButtonColor: '#416900' });
     }
 
+    // 4. Se il database ha salvato con successo, inviamo l'email!
     try {
         const nomeServizio = document.getElementById('summary-service').innerText;
         const nomeAgente = document.getElementById('summary-agent').innerText;
 
-        await fetch('/api/send-email', {
+        const emailResponse = await fetch('/api/send-email', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -259,8 +260,17 @@ async function confermaPrenotazione() {
                 ora: prenotazione.ora
             })
         });
+
+        // AGGIUNTA: Se il server risponde con un errore, stampalo in console!
+        if (!emailResponse.ok) {
+            const erroreDettagli = await emailResponse.json();
+            console.error("❌ ERRORE SERVERLESS EMAIL:", erroreDettagli);
+        } else {
+            console.log("📩 Email inviata con successo tramite Resend!");
+        }
+
     } catch (emailError) {
-        console.error("Errore durante l'invio dell'email di conferma:", emailError);
+        console.error("❌ ERRORE DI RETE CON LE EMAIL:", emailError);
     }
 
     btn.disabled = false; 
