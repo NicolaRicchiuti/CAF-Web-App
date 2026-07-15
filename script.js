@@ -157,39 +157,34 @@ async function caricaSlotDisponibili() {
     container.classList.remove('hidden');
     container.innerHTML = '<p class="col-span-2 text-center text-sm text-zinc-500 py-4">Verifica disponibilità in corso...</p>';
     
-    // --- CONNESSIONE AL DB: Recupero gli appuntamenti già fissati per questo agente in questa data ---
+    // --- CONNESSIONE AL DB ---
     const { data: appuntamentiOccupati, error } = await _supabase
         .from('appuntamenti')
         .select('ora')
         .eq('agente_id', prenotazione.agente_id)
         .eq('data', prenotazione.data);
         
-    // Estraiamo solo gli orari occupati in un array facile da leggere (es. ['10:30', '15:30'])
-    // Nota: Supabase salva l'ora come "10:30:00", quindi usiamo substring(0,5) per tagliare i secondi
     let orariGiaPrenotati = [];
     if (!error && appuntamentiOccupati) {
         orariGiaPrenotati = appuntamentiOccupati.map(app => app.ora.substring(0, 5));
     }
 
-    // ORARI UFFICIALI (Mattina 10-12, Pomeriggio 15:30-18:30 ogni 30 min)
+    // ORARI UFFICIALI
     const orariDisponibili = [
         '10:00', '10:30', '11:00', '11:30', '12:00', 
         '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
     ];
     
-    // Generiamo i bottoni. Se l'orario è nell'array 'orariGiaPrenotati', lo disegniamo spento!
     container.innerHTML = orariDisponibili.map(ora => {
         const isOccupato = orariGiaPrenotati.includes(ora);
         
         if (isOccupato) {
-            // BOTTONE SPENTO (Occupato)
             return `
                 <button type="button" disabled title="Orario non disponibile" class="py-2 px-4 rounded-xl border border-zinc-100 bg-zinc-50 text-sm font-bold text-zinc-300 cursor-not-allowed line-through">
                     ${ora}
                 </button>
             `;
         } else {
-            // BOTTONE ACCESO (Libero)
             return `
                 <button type="button" onclick="selezionaOra('${ora}')" id="slot-${ora.replace(':','')}" class="py-2 px-4 rounded-xl border border-zinc-200 text-sm font-bold text-zinc-600 hover:border-primary hover:text-primary transition-colors">
                     ${ora}
@@ -198,7 +193,6 @@ async function caricaSlotDisponibili() {
         }
     }).join('');
     
-    // Reset preventivo dell'orario prescelto
     prenotazione.ora = null;
     document.getElementById('summary-time').innerText = '-';
 }
@@ -210,14 +204,20 @@ function selezionaOra(ora) {
     document.getElementById(`slot-${ora.replace(':','')}`).classList.add('bg-primary', 'text-white', 'border-primary');
 }
 
-// Salvataggio sul Database Supabase
+// Salvataggio sul Database Supabase (Aggiornato con controllo Privacy e invio Email)
 async function confermaPrenotazione() {
     const nome = document.getElementById('user-name').value;
     const telefono = document.getElementById('user-phone').value;
     const email = document.getElementById('user-email').value;
+    const privacyCheck = document.getElementById('accetta-privacy');
 
-    if (!prenotazione.servizio_id || !prenotazione.agente_id || !prenotazione.data || !prenotazione.ora || !nome || !telefono) {
-        return Swal.fire({ icon: 'warning', title: 'Dati incompleti', text: 'Assicurati di aver scelto il consulente, il servizio, la data, l\'orario e inserito i tuoi dati.', confirmButtonColor: '#416900' });
+    if (!prenotazione.servizio_id || !prenotazione.agente_id || !prenotazione.data || !prenotazione.ora || !nome || !telefono || !privacyCheck.checked) {
+        return Swal.fire({ 
+            icon: 'warning', 
+            title: 'Dati incompleti o Privacy mancante', 
+            text: 'Assicurati di aver scelto il consulente, il servizio, la data, l\'orario, inserito i tuoi dati e accettato la Privacy Policy.', 
+            confirmButtonColor: '#416900' 
+        });
     }
 
     const btn = document.getElementById('btn-conferma');
@@ -235,16 +235,46 @@ async function confermaPrenotazione() {
         stato: 'in attesa'
     });
 
+    if (error) {
+        btn.disabled = false; 
+        btn.innerText = "Conferma Prenotazione";
+        return Swal.fire({ icon: 'error', title: 'Errore', text: error.message, confirmButtonColor: '#416900' });
+    }
+
+    try {
+        const nomeServizio = document.getElementById('summary-service').innerText;
+        const nomeAgente = document.getElementById('summary-agent').innerText;
+
+        await fetch('/api/send-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nome: nome,
+                email: email,
+                servizio: nomeServizio,
+                agente: nomeAgente,
+                data: prenotazione.data,
+                ora: prenotazione.ora
+            })
+        });
+    } catch (emailError) {
+        console.error("Errore durante l'invio dell'email di conferma:", emailError);
+    }
+
     btn.disabled = false; 
     btn.innerText = "Conferma Prenotazione";
 
-    if (error) {
-        Swal.fire({ icon: 'error', title: 'Errore', text: error.message, confirmButtonColor: '#416900' });
-    } else {
-        Swal.fire({ icon: 'success', title: 'Prenotazione Confermata!', text: 'I tuoi dati sono stati salvati correttamente.', confirmButtonColor: '#416900' }).then(() => window.location.reload());
-    }
+    Swal.fire({ 
+        icon: 'success', 
+        title: 'Prenotazione Confermata!', 
+        text: 'I tuoi dati sono stati salvati correttamente. Riceverai un\'email di conferma.', 
+        confirmButtonColor: '#416900' 
+    }).then(() => window.location.reload());
 }
-// REGISTRAZIONE DEL SERVICE WORKER PER ABILITARE L'INSTALLAZIONE PWA
+
+// REGISTRAZIONE DEL SERVICE WORKER
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
