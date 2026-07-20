@@ -85,7 +85,6 @@ function renderizzaTabella(lista) {
     }
 
     tbody.innerHTML = lista.map(app => {
-        // Generiamo il link al volo nel browser come paracadute per i vecchi test
         let telPulito = (app.telefono || '').replace(/\D/g, '');
         if (telPulito && !telPulito.startsWith('39')) {
             telPulito = '39' + telPulito;
@@ -95,7 +94,6 @@ function renderizzaTabella(lista) {
         const messaggio = `Gentile ${app.nome_cliente}, ti confermiamo l'appuntamento al CAF UCI per il giorno ${dataIT} alle ore ${oraIT}. A presto!`;
         const linkFallback = telPulito ? `https://wa.me/${telPulito}?text=${encodeURIComponent(messaggio)}` : '#';
         
-        // Usa il link salvato da Supabase, se manca usa quello generato al volo
         const linkFinale = app.link_whatsapp || linkFallback;
 
         return `
@@ -134,26 +132,50 @@ function renderizzaTabella(lista) {
     }).join('');
 }
 
-async function cambiaStato(id, nuovo) { await _supabase.from('appuntamenti').update({ stato: nuovo }).eq('id', id); }
+async function cambiaStato(id, nuovo) { 
+    await _supabase.from('appuntamenti').update({ stato: nuovo }).eq('id', id); 
+}
 
 async function elimina(id) {
-    const result = await Swal.fire({ title: 'Sei sicuro?', text: "L'appuntamento verrà eliminato in modo definitivo!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#a1a1aa', confirmButtonText: 'Sì, elimina', cancelButtonText: 'Annulla' });
-    if (result.isConfirmed) { await _supabase.from('appuntamenti').delete().eq('id', id); }
+    const result = await Swal.fire({ 
+        title: 'Sei sicuro?', 
+        text: "L'appuntamento verrà eliminato in modo definitivo!", 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonColor: '#d33', 
+        cancelButtonColor: '#a1a1aa', 
+        confirmButtonText: 'Sì, elimina', 
+        cancelButtonText: 'Annulla' 
+    });
+    if (result.isConfirmed) { 
+        await _supabase.from('appuntamenti').delete().eq('id', id); 
+    }
 }
 
 async function apriModaleModifica(id, agenteId, data, ora) {
     const { data: agenti } = await _supabase.from('agenti').select('*');
     document.getElementById('edit-agent').innerHTML = agenti.map(a => `<option value="${a.id}" ${a.id == agenteId ? 'selected' : ''}>${a.nome}</option>`).join('');
-    document.getElementById('edit-app-id').value = id; document.getElementById('edit-date').value = data; document.getElementById('edit-time').value = ora.substring(0,5);
+    document.getElementById('edit-app-id').value = id; 
+    document.getElementById('edit-date').value = data; 
+    document.getElementById('edit-time').value = ora.substring(0,5);
     document.getElementById('modal-modifica').classList.remove('hidden');
 }
 
-function chiudiModaleModifica() { document.getElementById('modal-modifica').classList.add('hidden'); }
+function chiudiModaleModifica() { 
+    document.getElementById('modal-modifica').classList.add('hidden'); 
+}
 
 async function salvaModifiche(btn) {
     btn.disabled = true;
-    await _supabase.from('appuntamenti').update({ agente_id: document.getElementById('edit-agent').value, data: document.getElementById('edit-date').value, ora: document.getElementById('edit-time').value }).eq('id', document.getElementById('edit-app-id').value);
-    chiudiModaleModifica(); caricaDashboard(); Swal.fire({ icon: 'success', title: 'Aggiornato', showConfirmButton: false, timer: 1500 });
+    await _supabase.from('appuntamenti').update({ 
+        agente_id: document.getElementById('edit-agent').value, 
+        data: document.getElementById('edit-date').value, 
+        ora: document.getElementById('edit-time').value 
+    }).eq('id', document.getElementById('edit-app-id').value);
+    
+    chiudiModaleModifica(); 
+    caricaDashboard(); 
+    Swal.fire({ icon: 'success', title: 'Aggiornato', showConfirmButton: false, timer: 1500 });
     btn.disabled = false;
 }
 
@@ -163,20 +185,43 @@ async function apriModaleBlocco() {
     document.getElementById('modal-blocco').classList.remove('hidden');
 }
 
-function chiudiModaleBlocco() { document.getElementById('modal-blocco').classList.add('hidden'); }
-function toggleOrariBlocco() { document.getElementById('block-times-container').style.display = document.getElementById('block-fullday').checked ? 'none' : 'grid'; }
+function chiudiModaleBlocco() { 
+    document.getElementById('modal-blocco').classList.add('hidden'); 
+}
+
+function toggleOrariBlocco() { 
+    document.getElementById('block-times-container').style.display = document.getElementById('block-fullday').checked ? 'none' : 'grid'; 
+}
 
 async function salvaBlocco(btn) {
-    const data = document.getElementById('block-date').value; const isFull = document.getElementById('block-fullday').checked;
+    const data = document.getElementById('block-date').value; 
+    const isFull = document.getElementById('block-fullday').checked;
+    
     if(!data) return Swal.fire({ icon: 'warning', title: 'Attenzione', text: 'Scegli una data.' });
+    
     btn.disabled = true;
-    const { error } = await _supabase.from('blocchi').insert({ agente_id: document.getElementById('block-agent').value === 'all' ? null : document.getElementById('block-agent').value, data: data, ora_inizio: isFull ? "00:00" : document.getElementById('block-start').value, ora_fine: isFull ? "23:59" : document.getElementById('block-end').value, descrizione: "Blocco Admin" });
-    if (error) Swal.fire({ icon: 'error', text: error.message }); else { Swal.fire({ icon: 'success', title: 'Salvato' }); chiudiModaleBlocco(); }
+    
+    // Configurazione dell'oggetto da inserire, allineato alle colonne reali del database
+    const { error } = await _supabase.from('blocchi').insert({ 
+        agente_id: document.getElementById('block-agent').value === 'all' ? null : document.getElementById('block-agent').value, 
+        data: data, 
+        ora_inizio: isFull ? "00:00:00" : document.getElementById('block-start').value, 
+        ora_fine: isFull ? "23:59:00" : document.getElementById('block-end').value
+    });
+    
+    if (error) {
+        Swal.fire({ icon: 'error', text: error.message }); 
+    } else { 
+        Swal.fire({ icon: 'success', title: 'Salvato' }); 
+        chiudiModaleBlocco(); 
+    }
+    
     btn.disabled = false;
 }
 
 async function eseguiLogout() {
     if ((await Swal.fire({ title: 'Vuoi uscire?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sì, esci', cancelButtonText: 'Rimani' })).isConfirmed) {
-        await _supabase.auth.signOut(); window.location.href = 'login.html';
+        await _supabase.auth.signOut(); 
+        window.location.href = 'login.html';
     }
 }
