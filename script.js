@@ -15,6 +15,7 @@ let prenotazione = {
 let tuttiGliAgenti = [];
 let tuttiIServizi = [];
 let tutteLeCompetenze = [];
+let tuttiIBlocchi = []; // NUOVO: Contiene i blocchi inseriti dall'admin
 
 // Festività in cui il CAF è chiuso
 const festivitaItaliane = ['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'];
@@ -30,38 +31,54 @@ async function inizializzaApp() {
     flatpickr("#booking-date", {
         locale: "it", 
         dateFormat: "Y-m-d",
-        altInput: true, // Attiva la modalità nativa sdoppiata per evitare bug di posizionamento
-        altFormat: "j F Y", // Mostra a schermo una data elegante, es: "9 Luglio 2026"
+        altInput: true, 
+        altFormat: "j F Y", 
         altInputClass: "w-full bg-zinc-50 border border-zinc-200 hover:border-primary text-primary tracking-wide transition-colors rounded-2xl py-4 px-4 text-center font-bold cursor-pointer outline-none focus:ring-2 focus:ring-primary",
         minDate: "today", 
         disableMobile: true,
         disable: [
             function(date) {
+                // 1. Blocco Sabato (6) e Domenica (0)
                 if (date.getDay() === 0 || date.getDay() === 6) return true;
+                
+                // 2. Blocco Festività Italiane Nazionali
                 const m = (date.getMonth() + 1).toString().padStart(2, '0');
                 const d = date.getDate().toString().padStart(2, '0');
-                return festivitaItaliane.includes(`${m}-${d}`);
+                if (festivitaItaliane.includes(`${m}-${d}`)) return true;
+
+                // 3. NUOVO: Blocco "Intera Giornata (Ferie / Chiusura Ufficio)" da Admin
+                const dataCorrenteStr = `${date.getFullYear()}-${m}-${d}`;
+                const isUfficioChiuso = tuttiIBlocchi.some(b => 
+                    b.data === dataCorrenteStr && 
+                    b.agente_id === null && 
+                    b.ora_inizio === "00:00:00" && 
+                    b.ora_fine === "23:59:00"
+                );
+                
+                return isUfficioChiuso;
             }
         ],
         onChange: function(selectedDates, dateStr) {
             prenotazione.data = dateStr;
             document.getElementById('summary-date').innerText = dateStr;
-            caricaSlotDisponibili(); // Aggiorna e mostra gli orari
+            caricaSlotDisponibili(); 
         }
     });
 }
 
-// Scarica tutti i dati dal database
+// Scarica tutti i dati dal database (Incluso i blocchi orari)
 async function caricaDatiBase() {
-    const [resAgenti, resServizi, resCompetenze] = await Promise.all([
+    const [resAgenti, resServizi, resCompetenze, resBlocchi] = await Promise.all([
         _supabase.from('agenti').select('*').order('nome'),
         _supabase.from('servizi').select('*').order('nome'),
-        _supabase.from('competenze').select('*')
+        _supabase.from('competenze').select('*'),
+        _supabase.from('blocchi').select('*') // Scarichiamo i blocchi dal database
     ]);
     
     if (!resAgenti.error) tuttiGliAgenti = resAgenti.data;
     if (!resServizi.error) tuttiIServizi = resServizi.data;
     if (!resCompetenze.error) tutteLeCompetenze = resCompetenze.data;
+    if (!resBlocchi.error) tuttiIBlocchi = resBlocchi.data; // Salviamo i blocchi nella variabile globale
 
     renderizzaAgenti();
 }
@@ -90,12 +107,10 @@ function selezionaAgente(id, nome) {
     document.querySelectorAll('[id^="agent-card-"]').forEach(c => c.classList.remove('ring-2', 'ring-primary', 'bg-primary/5'));
     document.getElementById(`agent-card-${id}`).classList.add('ring-2', 'ring-primary', 'bg-primary/5');
 
-    // Reset rigoroso dei servizi e orari per evitare disallineamenti di stato
     prenotazione.servizio_id = null;
     document.getElementById('summary-service').innerText = '-';
-    caricaSlotDisponibili(); // Questo resetterà e nasconderà gli orari
+    caricaSlotDisponibili(); 
     
-    // Filtro competenze
     const serviziAbilitatiId = tutteLeCompetenze
         .filter(c => String(c.agente_id) === String(id))
         .map(c => String(c.servizio_id));
@@ -140,11 +155,10 @@ function selezionaServizio(id, nome) {
     caricaSlotDisponibili();
 }
 
-// 5. Gestione e Generazione degli Orari (Con controllo disponibilità in tempo reale)
+// 5. Gestione e Generazione degli Orari (Aggiornato con filtro blocchi ferie/orari)
 async function caricaSlotDisponibili() {
     const container = document.getElementById('slots-container');
     
-    // Se manca anche solo uno dei dati fondamentali, pulisci e nascondi tutto
     if (!prenotazione.servizio_id || !prenotazione.agente_id || !prenotazione.data) {
         container.innerHTML = '';
         container.classList.add('hidden');
@@ -153,11 +167,10 @@ async function caricaSlotDisponibili() {
         return;
     }
     
-    // Mostra il contenitore con un piccolo messaggio di caricamento per l'utente
     container.classList.remove('hidden');
     container.innerHTML = '<p class="col-span-2 text-center text-sm text-zinc-500 py-4">Verifica disponibilità in corso...</p>';
     
-    // --- CONNESSIONE AL DB ---
+    // Connessione per verificare gli appuntamenti già presi dai clienti
     const { data: appuntamentiOccupati, error } = await _supabase
         .from('appuntamenti')
         .select('ora')
@@ -169,12 +182,20 @@ async function caricaSlotDisponibili() {
         orariGiaPrenotati = appuntamentiOccupati.map(app => app.ora.substring(0, 5));
     }
 
-    // ORARI UFFICIALI
-    const orariDisponibili = [
+    // Tabella Orari Ufficiali di base
+    const orariStandard = [
         '10:00', '10:30', '11:00', '11:30', '12:00', 
         '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
     ];
     
+    // NUOVO: Applichiamo il filtro escludendo gli orari che l'admin ha bloccato per questo giorno/agente
+    const orariDisponibili = filtraOrariMancanti(orariStandard, prenotazione.data, prenotazione.agente_id, tuttiIBlocchi);
+    
+    if (orariDisponibili.length === 0) {
+        container.innerHTML = '<p class="col-span-full text-center text-sm text-amber-600 bg-amber-50 p-4 rounded-2xl font-bold">Nessun orario disponibile per questo giorno (Blocco Operatore o Ufficio).</p>';
+        return;
+    }
+
     container.innerHTML = orariDisponibili.map(ora => {
         const isOccupato = orariGiaPrenotati.includes(ora);
         
@@ -204,7 +225,7 @@ function selezionaOra(ora) {
     document.getElementById(`slot-${ora.replace(':','')}`).classList.add('bg-primary', 'text-white', 'border-primary');
 }
 
-// Salvataggio sul Database Supabase (Aggiornato con controllo Privacy e invio Email)
+// Salvataggio sul Database Supabase
 async function confermaPrenotazione() {
     const nome = document.getElementById('user-name').value;
     const telefono = document.getElementById('user-phone').value;
@@ -241,7 +262,6 @@ async function confermaPrenotazione() {
         return Swal.fire({ icon: 'error', title: 'Errore', text: error.message, confirmButtonColor: '#416900' });
     }
 
-    // 4. Se il database ha salvato con successo, inviamo l'email!
     try {
         const nomeServizio = document.getElementById('summary-service').innerText;
         const nomeAgente = document.getElementById('summary-agent').innerText;
@@ -255,14 +275,13 @@ async function confermaPrenotazione() {
                 nome: nome,
                 email: email,
                 servizio: nomeServizio,
-                telefono:telefono,
+                telefono: telefono,
                 agente: nomeAgente,
                 data: prenotazione.data,
                 ora: prenotazione.ora
             })
         });
 
-        // AGGIUNTA: Se il server risponde con un errore, stampalo in console!
         if (!emailResponse.ok) {
             const erroreDettagli = await emailResponse.json();
             console.error("❌ ERRORE SERVERLESS EMAIL:", erroreDettagli);
@@ -283,6 +302,42 @@ async function confermaPrenotazione() {
         text: 'I tuoi dati sono stati salvati correttamente. Riceverai un\'email di conferma.', 
         confirmButtonColor: '#416900' 
     }).then(() => window.location.reload());
+}
+
+// =========================================================================
+// NUOVE FUNZIONI DI UTILITÀ PER IL FILTRO DEI BLOCCHI ORARI
+// =========================================================================
+
+// Funzione principale che esclude gli orari coperti da ferie o blocchi specifici
+function filtraOrariMancanti(orariStandard, dataSelezionata, agenteSelezionato, listaBlocchi) {
+    // Filtriamo i blocchi validi per la data scelta e che interessano o TUTTI (null) o l'agente specifico
+    const blocchiDiOggi = listaBlocchi.filter(b => 
+        b.data === dataSelezionata && 
+        (b.agente_id === null || String(b.agente_id) === String(agenteSelezionato))
+    );
+
+    if (blocchiDiOggi.length === 0) return orariStandard;
+
+    return orariStandard.filter(ora => {
+        const oraInMinuti = convertiOraInMinuti(ora);
+
+        // Se l'orario del bottone cade dentro la fascia di un blocco, viene scartato
+        const copertoDaBlocco = blocchiDiOggi.some(blocco => {
+            const inizioMinuti = convertiOraInMinuti(blocco.ora_inizio);
+            const fineMinuti = convertiOraInMinuti(blocco.ora_fine);
+            return oraInMinuti >= inizioMinuti && oraInMinuti <= fineMinuti;
+        });
+
+        return !copertoDaBlocco;
+    });
+}
+
+// Converte stringhe orario come "10:30" o "15:00:00" in minuti totali dall'inizio del giorno per confronti matematici
+function convertiOraInMinuti(stringaOra) {
+    const parti = stringaOra.split(':');
+    const ore = parseInt(parti[0], 10);
+    const minuti = parseInt(parti[1], 10);
+    return (ore * 60) + minuti;
 }
 
 // REGISTRAZIONE DEL SERVICE WORKER
