@@ -1,3 +1,8 @@
+// =========================================================================
+// RIGA DI VERIFICA: Serve a verificare che il browser carichi la nuova versione
+// =========================================================================
+console.log("🚀 [SISTEMA] admin.js versione 2.0 caricata ed eseguita correttamente!");
+
 const SUPABASE_URL = 'https://vnpzggqebxcqbtwwwefv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZucHpnZ3FlYnhjcWJ0d3d3ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MzkyNzYsImV4cCI6MjA4NDQxNTI3Nn0.tYYlfFfvLgF7vMxjMKTF-3Gt1F_XEkB_2A4tL_OeM5Y';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5,8 +10,9 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // VARIABILI GLOBALI PER RICERCA E PAGINAZIONE
 let tuttiGliAppuntamenti = [];
 let appuntamentiFiltrati = [];
-let tuttiIBlocchi = []; // Contiene la lista dei blocchi attivi
-let idBloccoInModifica = null; // Specifica se stiamo creando (null) o modificando un blocco
+let tuttiIBlocchi = []; 
+let tuttiGliAgenti = []; 
+let idBloccoInModifica = null; 
 let paginaCorrente = 1;
 const elementsPerPagina = 10; 
 
@@ -20,16 +26,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function inizializzaDashboard() {
-    await caricaDashboard();
-    await caricaBlocchi(); // Carica i blocchi all'avvio
+    // Caricamento preventivo dei consulenti per le associazioni in memoria locale
+    const { data: dataAgenti, error: errorAgenti } = await _supabase
+        .from('agenti')
+        .select('*')
+        .order('nome');
     
-    // Ascolta i cambiamenti live degli appuntamenti
+    if (!errorAgenti && dataAgenti) {
+        tuttiGliAgenti = dataAgenti;
+    }
+
+    await caricaDashboard();
+    await caricaBlocchi(); 
+    
+    // Canale Realtime per gli appuntamenti dei clienti
     _supabase.channel('admin-live-appuntamenti')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'appuntamenti' }, () => {
         caricaDashboard();
     }).subscribe();
 
-    // Ascolta i cambiamenti live dei blocchi
+    // Canale Realtime per le chiusure e le ferie
     _supabase.channel('admin-live-blocchi')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'blocchi' }, () => {
         caricaBlocchi();
@@ -165,9 +181,8 @@ async function elimina(id) {
     }
 }
 
-async function apriModaleModifica(id, agenteId, data, ora) {
-    const { data: agenti } = await _supabase.from('agenti').select('*');
-    document.getElementById('edit-agent').innerHTML = agenti.map(a => `<option value="${a.id}" ${a.id == agenteId ? 'selected' : ''}>${a.nome}</option>`).join('');
+function apriModaleModifica(id, agenteId, data, ora) {
+    document.getElementById('edit-agent').innerHTML = tuttiGliAgenti.map(a => `<option value="${a.id}" ${a.id == agenteId ? 'selected' : ''}>${a.nome}</option>`).join('');
     document.getElementById('edit-app-id').value = id; 
     document.getElementById('edit-date').value = data; 
     document.getElementById('edit-time').value = ora.substring(0,5);
@@ -193,28 +208,26 @@ async function salvaModifiche(btn) {
 }
 
 // =========================================================================
-// NUOVO: GESTIONE COMPLETA BLOCCHI ORARI E FERIE (CRUD)
+// GESTIONE COMPLETA BLOCCHI ORARI E FERIE (CRUD)
 // =========================================================================
 
 async function caricaBlocchi() {
     const { data, error } = await _supabase
         .from('blocchi')
-        .select('*, agenti(nome)')
+        .select('*') 
         .order('data', { ascending: true });
 
-    // Modifichiamo questo blocco per stampare l'errore reale in console
     if (error) {
         console.error("❌ ERRORE RICEVUTO DA SUPABASE PER I BLOCCHI:", error);
         return;
     }
-    
     tuttiIBlocchi = data;
     renderizzaTabellaBlocchi(data);
 }
 
 function renderizzaTabellaBlocchi(lista) {
     const tbody = document.getElementById('admin-blocks-table-body');
-    if (!tbody) return; // Paracadute se l'HTML non è ancora pronto
+    if (!tbody) return; 
     
     if (lista.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-zinc-400 text-sm font-medium">Nessun blocco orario o ferie attivo.</td></tr>`;
@@ -224,14 +237,13 @@ function renderizzaTabellaBlocchi(lista) {
     tbody.innerHTML = lista.map(blocco => {
         const dataIT = new Date(blocco.data).toLocaleDateString('it-IT');
         
-        // Determina se il blocco copre l'intera giornata o solo una fascia oraria
         const isFerie = (blocco.ora_inizio === "00:00:00" && blocco.ora_fine === "23:59:00");
         const visualizzazioneOrario = isFerie 
             ? `<span class="px-2 py-1 rounded bg-red-50 text-red-600 font-bold text-[10px]">🌴 INTERA GIORNATA (FERIE)</span>` 
-            : `${blocco.ora_inizio.substring(0,5)} - ${blocco.ora_fine.substring(0,5)}`;
+            : `${blocco.ora_inizio.substring(0, 5)} - ${blocco.ora_fine.substring(0, 5)}`;
             
-        // Identifica a quale operatore si riferisce il blocco
-        const nomeConsulente = blocco.agenti ? blocco.agenti.nome : '<span class="text-amber-600 font-bold">TUTTI (Chiusura Sede)</span>';
+        const agenteCollegato = tuttiGliAgenti.find(a => String(a.id) === String(blocco.agente_id));
+        const nomeConsulente = agenteCollegato ? agenteCollegato.nome : '<span class="text-amber-600 font-bold">TUTTI (Chiusura Sede)</span>';
 
         return `
             <tr class="hover:bg-zinc-50 transition-colors">
@@ -253,13 +265,11 @@ function renderizzaTabellaBlocchi(lista) {
     }).join('');
 }
 
-async function apriModaleBlocco() {
-    idBloccoInModifica = null; // Specifichiamo che stiamo creando un NUOVO blocco
+function apriModaleBlocco() {
+    idBloccoInModifica = null; 
     
-    const { data: agenti } = await _supabase.from('agenti').select('*').order('nome');
-    document.getElementById('block-agent').innerHTML = `<option value="all">Tutti (Chiusura Ufficio)</option>` + agenti.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+    document.getElementById('block-agent').innerHTML = `<option value="all">Tutti (Chiusura Ufficio)</option>` + tuttiGliAgenti.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
     
-    // Reset dei campi del modulo
     document.getElementById('block-date').value = "";
     document.getElementById('block-fullday').checked = false;
     document.getElementById('block-start').value = "09:00";
@@ -267,36 +277,32 @@ async function apriModaleBlocco() {
     
     toggleOrariBlocco();
     
-    // Modifichiamo il testo del bottone per chiarezza grafica
     const btnConferma = document.querySelector('#modal-blocco button[onclick^="salvaBlocco"]');
     if(btnConferma) btnConferma.innerText = "Conferma Blocco";
     
     document.getElementById('modal-blocco').classList.remove('hidden');
 }
 
-// Funzione attivata quando si preme il tasto Modifica (Matita) sulla tabella dei blocchi
 function apriModificaBlocco(id, agenteId, data, oraInizio, oraFine) {
-    idBloccoInModifica = id; // Memorizziamo l'id del record da aggiornare
+    idBloccoInModifica = id; 
     
-    apriModaleBlocco().then(() => {
-        // Selezioniamo i valori vecchi all'interno degli input della modale
-        document.getElementById('block-agent').value = (agenteId === "null" || !agenteId) ? "all" : agenteId;
-        document.getElementById('block-date').value = data;
-        
-        const isFull = (oraInizio === "00:00:00" && oraFine === "23:59:00");
-        document.getElementById('block-fullday').checked = isFull;
-        
-        if(!isFull) {
-            document.getElementById('block-start').value = oraInizio.substring(0,5);
-            document.getElementById('block-end').value = oraFine.substring(0,5);
-        }
-        
-        toggleOrariBlocco();
-        
-        // Modifichiamo il testo del bottone per segnalare la modifica in corso
-        const btnConferma = document.querySelector('#modal-blocco button[onclick^="salvaBlocco"]');
-        if(btnConferma) btnConferma.innerText = "Salva Modifiche Blocco";
-    });
+    apriModaleBlocco();
+    
+    document.getElementById('block-agent').value = (!agenteId || agenteId === "null" || agenteId === null) ? "all" : agenteId;
+    document.getElementById('block-date').value = data;
+    
+    const isFull = (oraInizio === "00:00:00" && oraFine === "23:59:00");
+    document.getElementById('block-fullday').checked = isFull;
+    
+    if(!isFull) {
+        document.getElementById('block-start').value = oraInizio.substring(0, 5);
+        document.getElementById('block-end').value = oraFine.substring(0, 5);
+    }
+    
+    toggleOrariBlocco();
+    
+    const btnConferma = document.querySelector('#modal-blocco button[onclick^="salvaBlocco"]');
+    if(btnConferma) btnConferma.innerText = "Salva Modifiche Blocco";
 }
 
 function chiudiModaleBlocco() { 
@@ -317,20 +323,26 @@ async function salvaBlocco(btn) {
     btn.disabled = true;
     
     const agenteValore = document.getElementById('block-agent').value;
+    
+    // Normalizzazione sicura degli input per evitare formati orari incompleti
+    const inizioInput = document.getElementById('block-start').value;
+    const fineInput = document.getElementById('block-end').value;
+    
+    const oraInizioConfigurata = isFull ? "00:00:00" : (inizioInput.includes(':') && inizioInput.split(':').length === 2 ? inizioInput + ":00" : inizioInput);
+    const oraFineConfigurata = isFull ? "23:59:00" : (fineInput.includes(':') && fineInput.split(':').length === 2 ? fineInput + ":00" : fineInput);
+
     const datiBlocco = {
         agente_id: agenteValore === 'all' ? null : agenteValore, 
         data: data, 
-        ora_inizio: isFull ? "00:00:00" : document.getElementById('block-start').value + ":00", 
-        ora_fine: isFull ? "23:59:00" : document.getElementById('block-end').value + ":00"
+        ora_inizio: oraInizioConfigurata, 
+        ora_fine: oraFineConfigurata
     };
 
     let risposta;
     
     if (idBloccoInModifica) {
-        // MODALITÀ UPDATE: Aggiorna il blocco esistente
         risposta = await _supabase.from('blocchi').update(datiBlocco).eq('id', idBloccoInModifica);
     } else {
-        // MODALITÀ INSERT: Crea un nuovo blocco
         risposta = await _supabase.from('blocchi').insert(datiBlocco);
     }
     
@@ -339,7 +351,7 @@ async function salvaBlocco(btn) {
     } else { 
         Swal.fire({ icon: 'success', title: idBloccoInModifica ? 'Blocco Spostato!' : 'Blocco Creato!' }); 
         chiudiModaleBlocco(); 
-        caricaBlocchi(); // Ricarica la tabella dei blocchi
+        caricaBlocchi(); 
     }
     
     btn.disabled = false;
@@ -362,10 +374,6 @@ async function eliminaBlocco(id) {
         caricaBlocchi();
     }
 }
-
-// =========================================================================
-// ACCOUNT / LOGOUT
-// =========================================================================
 
 async function eseguiLogout() {
     if ((await Swal.fire({ title: 'Vuoi uscire?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sì, esci', cancelButtonText: 'Rimani' })).isConfirmed) {
