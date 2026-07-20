@@ -196,7 +196,7 @@ async function salvaModifiche(btn) {
 // NUOVO: GESTIONE COMPLETA BLOCCHI ORARI E FERIE (CRUD)
 // =========================================================================
 
-async function caricaBlocchi() {async function caricaBlocchi() {
+async function caricaBlocchi() {
     const { data, error } = await _supabase
         .from('blocchi')
         .select('*, agenti(nome)')
