@@ -196,13 +196,18 @@ async function salvaModifiche(btn) {
 // NUOVO: GESTIONE COMPLETA BLOCCHI ORARI E FERIE (CRUD)
 // =========================================================================
 
-async function caricaBlocchi() {
+async function caricaBlocchi() {async function caricaBlocchi() {
     const { data, error } = await _supabase
         .from('blocchi')
         .select('*, agenti(nome)')
         .order('data', { ascending: true });
 
-    if (error) return;
+    // Modifichiamo questo blocco per stampare l'errore reale in console
+    if (error) {
+        console.error("❌ ERRORE RICEVUTO DA SUPABASE PER I BLOCCHI:", error);
+        return;
+    }
+    
     tuttiIBlocchi = data;
     renderizzaTabellaBlocchi(data);
 }
