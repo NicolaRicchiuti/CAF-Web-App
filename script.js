@@ -225,18 +225,19 @@ function selezionaOra(ora) {
     document.getElementById(`slot-${ora.replace(':','')}`).classList.add('bg-primary', 'text-white', 'border-primary');
 }
 
-// Salvataggio sul Database Supabase
+// Salvataggio sul Database Supabase (Aggiornato: Email Opzionale)
 async function confermaPrenotazione() {
     const nome = document.getElementById('user-name').value;
     const telefono = document.getElementById('user-phone').value;
-    const email = document.getElementById('user-email').value;
+    const email = document.getElementById('user-email').value.trim(); // trim() rimuove eventuali spazi vuoti accidentali
     const privacyCheck = document.getElementById('accetta-privacy');
 
+    // 1. Controllo di validazione: l'email NON è nell'elenco dei campi obbligatori
     if (!prenotazione.servizio_id || !prenotazione.agente_id || !prenotazione.data || !prenotazione.ora || !nome || !telefono || !privacyCheck.checked) {
         return Swal.fire({ 
             icon: 'warning', 
             title: 'Dati incompleti o Privacy mancante', 
-            text: 'Assicurati di aver scelto il consulente, il servizio, la data, l\'orario, inserito i tuoi dati e accettato la Privacy Policy.', 
+            text: 'Assicurati di aver scelto il consulente, il servizio, la data, l\'orario, inserito il tuo nome, telefono e accettato la Privacy Policy.', 
             confirmButtonColor: '#416900' 
         });
     }
@@ -245,10 +246,11 @@ async function confermaPrenotazione() {
     btn.disabled = true; 
     btn.innerText = "Salvataggio...";
 
+    // 2. Inserimento nel database: se l'email è vuota, salverà null
     const { error } = await _supabase.from('appuntamenti').insert({
         nome_cliente: nome, 
         telefono: telefono, 
-        email_cliente: email,
+        email_cliente: email || null, // Se email è vuota passa null a Supabase
         servizio_id: prenotazione.servizio_id, 
         agente_id: prenotazione.agente_id,
         data: prenotazione.data, 
@@ -262,44 +264,50 @@ async function confermaPrenotazione() {
         return Swal.fire({ icon: 'error', title: 'Errore', text: error.message, confirmButtonColor: '#416900' });
     }
 
-    try {
-        const nomeServizio = document.getElementById('summary-service').innerText;
-        const nomeAgente = document.getElementById('summary-agent').innerText;
+    // 3. Invio Email: Viene eseguito SOLO SE l'utente ha inserito un'email valida
+    if (email) {
+        try {
+            const nomeServizio = document.getElementById('summary-service').innerText;
+            const nomeAgente = document.getElementById('summary-agent').innerText;
 
-        const emailResponse = await fetch('/api/send-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                nome: nome,
-                email: email,
-                servizio: nomeServizio,
-                telefono: telefono,
-                agente: nomeAgente,
-                data: prenotazione.data,
-                ora: prenotazione.ora
-            })
-        });
+            const emailResponse = await fetch('/api/send-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    nome: nome,
+                    email: email,
+                    servizio: nomeServizio,
+                    telefono: telefono,
+                    agente: nomeAgente,
+                    data: prenotazione.data,
+                    ora: prenotazione.ora
+                })
+            });
 
-        if (!emailResponse.ok) {
-            const erroreDettagli = await emailResponse.json();
-            console.error("❌ ERRORE SERVERLESS EMAIL:", erroreDettagli);
-        } else {
-            console.log("📩 Email inviata con successo tramite Resend!");
+            if (!emailResponse.ok) {
+                const erroreDettagli = await emailResponse.json();
+                console.error("❌ ERRORE SERVERLESS EMAIL:", erroreDettagli);
+            } else {
+                console.log("📩 Email inviata con successo tramite Resend!");
+            }
+
+        } catch (emailError) {
+            console.error("❌ ERRORE DI RETE CON LE EMAIL:", emailError);
         }
-
-    } catch (emailError) {
-        console.error("❌ ERRORE DI RETE CON LE EMAIL:", emailError);
+    } else {
+        console.log("ℹ️ Nessuna email inserita dal cliente: invio notifica ignorato.");
     }
 
     btn.disabled = false; 
     btn.innerText = "Conferma Prenotazione";
 
+    // 4. Messaggio di successo al cliente
     Swal.fire({ 
         icon: 'success', 
         title: 'Prenotazione Confermata!', 
-        text: 'I tuoi dati sono stati salvati correttamente. Riceverai un\'email di conferma.', 
+        text: 'I tuoi dati sono stati salvati correttamente. Ci vediamo al CAF!', 
         confirmButtonColor: '#416900' 
     }).then(() => window.location.reload());
 }
