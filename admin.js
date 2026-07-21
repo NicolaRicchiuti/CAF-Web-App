@@ -148,7 +148,8 @@ function renderizzaTabella(lista) {
                         ${app.stato === 'in attesa' ? `<button onclick="cambiaStato('${app.id}', 'confermato')" class="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all" title="Conferma"><span class="material-symbols-outlined">check_circle</span></button>` : ''}
                         
                         ${telPulito ? `
-                            <a href="${linkFinale}" target="_blank" rel="noopener noreferrer" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all inline-flex items-center justify-center" title="Invia promemoria WhatsApp">
+                            <!-- MODIFICATO: target="whatsapp_chat" riutilizza sempre la stessa scheda -->
+                            <a href="${linkFinale}" target="whatsapp_chat" rel="noopener" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all inline-flex items-center justify-center" title="Invia promemoria WhatsApp">
                                 <span class="material-symbols-outlined text-xl">chat</span>
                             </a>
                         ` : ''}
