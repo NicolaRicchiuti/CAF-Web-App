@@ -1,23 +1,19 @@
 const { Resend } = require('resend');
 
 module.exports = async function handler(req, res) {
-    // Permettiamo solo richieste di tipo POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Metodo non consentito' });
     }
 
     try {
-        // Controllo della presenza della chiave API di Resend
         const apiKey = process.env.RESEND_API_KEY;
         if (!apiKey) {
-            console.error("❌ Manca la chiave RESEND_API_KEY nelle variabili di Vercel");
             return res.status(500).json({ error: 'Manca la chiave RESEND_API_KEY su Vercel' });
         }
 
         const resend = new Resend(apiKey);
         
-        // EMAIL DELL'UFFICIO CAF CHE RICEVE LE NOTIFICHE
-        // (Nota: Durante i test con account gratuito Resend, usa la TUA email di registrazione a Resend)
+        // EMAIL DELL'UFFICIO CAF (Questa è l'email che riceverà le notifiche delle nuove prenotazioni)
         const EMAIL_UFFICIO_CAF = 'uciavellino@gmail.com'; 
 
         const { tipo, nome, email, servizio, telefono, agente, data, ora } = req.body;
@@ -27,7 +23,6 @@ module.exports = async function handler(req, res) {
         let oggettoEmail = '';
         let contenutoHtml = '';
 
-        // 1. NOTIFICA AL CAF PER NUOVA RICHIESTA CLIENTE
         if (tipo === 'NUOVA_RICHIESTA_CAF') {
             emailDestinatario = EMAIL_UFFICIO_CAF;
             oggettoEmail = `🔔 Nuova richiesta prenotazione: ${nome}`;
@@ -45,9 +40,7 @@ module.exports = async function handler(req, res) {
                 </ul>
                 <p>Accedi al pannello amministratore per confermare o modificare l'appuntamento.</p>
             `;
-        } 
-        // 2. CONFERMA UFFICIALE AL CLIENTE
-        else if (tipo === 'CONFERMA_CLIENTE') {
+        } else if (tipo === 'CONFERMA_CLIENTE') {
             if (!email) return res.status(200).json({ message: 'Nessuna email cliente fornita.' });
             emailDestinatario = email;
             oggettoEmail = `✅ Appuntamento Confermato - CAF UCI`;
@@ -63,9 +56,7 @@ module.exports = async function handler(req, res) {
                 </ul>
                 <p>Ti aspettiamo in sede. Per eventuali comunicazioni puoi contattarci telefonicamente.</p>
             `;
-        } 
-        // 3. NOTIFICA DI MODIFICA AL CLIENTE
-        else if (tipo === 'MODIFICA_CLIENTE') {
+        } else if (tipo === 'MODIFICA_CLIENTE') {
             if (!email) return res.status(200).json({ message: 'Nessuna email cliente fornita.' });
             emailDestinatario = email;
             oggettoEmail = `✏️ Aggiornamento Appuntamento - CAF UCI`;
@@ -85,18 +76,29 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ error: 'Tipo email non riconosciuto' });
         }
 
-        // Invio dell'email tramite Resend
+        // ====================================================================
+        // INVIO EMAIL: Qui usiamo il TUO VERO DOMINIO come mittente!
+        // ====================================================================
         const response = await resend.emails.send({
-            from: 'CAF UCI <onboarding@resend.dev>',
+            from: 'CAF UCI <info@uciavellino.it>', // <--- IL TUO DOMINIO UFFICIALE
             to: [emailDestinatario],
             subject: oggettoEmail,
             html: contenutoHtml,
         });
 
-        return res.status(200).json({ success: true, data: response });
+        // VERIFICA ERRORE INTERNO RESEND
+        if (response.error) {
+            console.error("❌ ERRORE RESEND:", response.error);
+            return res.status(400).json({ 
+                success: false, 
+                error: response.error.message || 'Errore invio Resend' 
+            });
+        }
+
+        return res.status(200).json({ success: true, data: response.data });
 
     } catch (error) {
         console.error("❌ Errore interno Serverless:", error);
-        return res.status(500).json({ error: error.message || 'Errore interno del server' });
+        return res.status(500).json({ success: false, error: error.message || 'Errore interno del server' });
     }
 };
