@@ -148,7 +148,7 @@ function renderizzaTabella(lista) {
                         ${app.stato === 'in attesa' ? `<button onclick="cambiaStato('${app.id}', 'confermato')" class="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all" title="Conferma"><span class="material-symbols-outlined">check_circle</span></button>` : ''}
                         
                         ${telPulito ? `
-                            <!-- MODIFICATO: target="whatsapp_chat" riutilizza sempre la stessa scheda -->
+                            <!-- target="whatsapp_chat" riutilizza sempre la stessa scheda -->
                             <a href="${linkFinale}" target="whatsapp_chat" rel="noopener" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all inline-flex items-center justify-center" title="Invia promemoria WhatsApp">
                                 <span class="material-symbols-outlined text-xl">chat</span>
                             </a>
@@ -162,8 +162,51 @@ function renderizzaTabella(lista) {
     }).join('');
 }
 
+// FUNZIONE AGGIORNATA: Cambia stato e invia email di conferma se presente l'indirizzo
 async function cambiaStato(id, nuovo) { 
-    await _supabase.from('appuntamenti').update({ stato: nuovo }).eq('id', id); 
+    // 1. Troviamo i dettagli dell'appuntamento salvato in memoria locale
+    const appuntamento = tuttiGliAppuntamenti.find(a => String(a.id) === String(id));
+
+    // 2. Aggiorniamo lo stato nel database Supabase
+    const { error } = await _supabase
+        .from('appuntamenti')
+        .update({ stato: nuovo })
+        .eq('id', id); 
+
+    if (error) {
+        return Swal.fire({ icon: 'error', title: 'Errore', text: error.message });
+    }
+
+    // 3. Se l'appuntamento viene confermato e il cliente ha fornito un'email, inviamo la notifica
+    if (nuovo === 'confermato' && appuntamento && appuntamento.email_cliente) {
+        try {
+            const emailResponse = await fetch('/api/send-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    nome: appuntamento.nome_cliente,
+                    email: appuntamento.email_cliente,
+                    servizio: appuntamento.servizi ? appuntamento.servizi.nome : 'Servizio CAF',
+                    telefono: appuntamento.telefono,
+                    agente: appuntamento.agenti ? appuntamento.agenti.nome : 'Consulente CAF',
+                    data: appuntamento.data,
+                    ora: appuntamento.ora.substring(0, 5)
+                })
+            });
+
+            if (!emailResponse.ok) {
+                const erroreDettagli = await emailResponse.json();
+                console.error("❌ ERRORE SERVERLESS EMAIL:", erroreDettagli);
+            } else {
+                console.log("📩 Email di conferma inviata con successo al cliente tramite Resend!");
+            }
+
+        } catch (emailError) {
+            console.error("❌ ERRORE DI RETE DURANTE L'INVIO EMAIL:", emailError);
+        }
+    }
 }
 
 async function elimina(id) {
