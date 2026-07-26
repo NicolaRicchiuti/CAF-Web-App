@@ -163,6 +163,7 @@ function renderizzaTabella(lista) {
 }
 
 // 1. CONFERMA APPUNTAMENTO: Cambia stato ed invia l'email di CONFERMA al cliente
+// 1. CONFERMA APPUNTAMENTO: Cambia stato ed invia l'email di CONFERMA al cliente
 async function cambiaStato(id, nuovo) { 
     const appuntamento = tuttiGliAppuntamenti.find(a => String(a.id) === String(id));
 
@@ -175,7 +176,6 @@ async function cambiaStato(id, nuovo) {
         return Swal.fire({ icon: 'error', title: 'Errore', text: error.message });
     }
 
-    // Se l'appuntamento viene confermato e il cliente ha fornito un'email, inviamo la notifica
     if (nuovo === 'confermato' && appuntamento && appuntamento.email_cliente) {
         try {
             const emailResponse = await fetch('/api/send-email', {
@@ -193,7 +193,6 @@ async function cambiaStato(id, nuovo) {
                 })
             });
 
-            // Lettura sicura del testo per evitare eccezioni di parsing JSON
             const testoRisposta = await emailResponse.text();
             let datiRisposta;
             try {
@@ -202,8 +201,8 @@ async function cambiaStato(id, nuovo) {
                 datiRisposta = testoRisposta;
             }
 
-            if (!emailResponse.ok) {
-                console.error(`❌ ERRORE SERVERLESS EMAIL (HTTP ${emailResponse.status}):`, datiRisposta);
+            if (!emailResponse.ok || (datiRisposta && datiRisposta.success === false)) {
+                console.error(`❌ ERRORE INVIO EMAIL (HTTP ${emailResponse.status}):`, datiRisposta);
             } else {
                 console.log("📩 Email di conferma inviata con successo al cliente!", datiRisposta);
             }
