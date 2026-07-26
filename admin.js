@@ -1,7 +1,7 @@
 // =========================================================================
 // RIGA DI VERIFICA: Serve a verificare che il browser carichi la nuova versione
 // =========================================================================
-console.log("🚀 [SISTEMA] admin.js versione 2.2 caricata ed eseguita correttamente!");
+console.log("🚀 [SISTEMA] admin.js versione 2.3 (Flusso Email Completo) caricata ed eseguita correttamente!");
 
 const SUPABASE_URL = 'https://vnpzggqebxcqbtwwwefv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZucHpnZ3FlYnhjcWJ0d3d3ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MzkyNzYsImV4cCI6MjA4NDQxNTI3Nn0.tYYlfFfvLgF7vMxjMKTF-3Gt1F_XEkB_2A4tL_OeM5Y';
@@ -121,7 +121,6 @@ function renderizzaTabella(lista) {
         const nomeServizio = app.servizi?.nome || 'Servizio CAF';
         const nomeConsulente = app.agenti?.nome || 'Operatore CAF';
 
-        // NUOVO: Messaggio di riepilogo dettagliato per WhatsApp
         const messaggio = `Gentile *${app.nome_cliente}*,\nti confermiamo il tuo appuntamento presso il *CAF UCI*! 📌\n\n📋 *RIEPILOGO PRENOTAZIONE*\n🔹 *Servizio:* ${nomeServizio}\n🔹 *Consulente:* ${nomeConsulente}\n📅 *Data:* ${dataIT}\n⏰ *Ora:* ${oraIT}\n\nTi aspettiamo in sede! Per qualsiasi informazione puoi rispondere a questo messaggio.`;
         
         const linkFallback = telPulito ? `https://wa.me/${telPulito}?text=${encodeURIComponent(messaggio)}` : '#';
@@ -163,7 +162,7 @@ function renderizzaTabella(lista) {
     }).join('');
 }
 
-// Funzione per cambiare stato ed inviare email
+// 1. CONFERMA APPUNTAMENTO: Cambia stato ed invia l'email di CONFERMA al cliente
 async function cambiaStato(id, nuovo) { 
     const appuntamento = tuttiGliAppuntamenti.find(a => String(a.id) === String(id));
 
@@ -176,14 +175,14 @@ async function cambiaStato(id, nuovo) {
         return Swal.fire({ icon: 'error', title: 'Errore', text: error.message });
     }
 
+    // Se l'appuntamento viene confermato e il cliente ha fornito un'email, inviamo la notifica
     if (nuovo === 'confermato' && appuntamento && appuntamento.email_cliente) {
         try {
             const emailResponse = await fetch('/api/send-email', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    tipo: 'CONFERMA_CLIENTE',
                     nome: appuntamento.nome_cliente,
                     email: appuntamento.email_cliente,
                     servizio: appuntamento.servizi ? appuntamento.servizi.nome : 'Servizio CAF',
@@ -198,7 +197,7 @@ async function cambiaStato(id, nuovo) {
                 const erroreDettagli = await emailResponse.json();
                 console.error("❌ ERRORE SERVERLESS EMAIL:", erroreDettagli);
             } else {
-                console.log("📩 Email di conferma inviata con successo al cliente tramite Resend!");
+                console.log("📩 Email di conferma inviata con successo al cliente!");
             }
 
         } catch (emailError) {
@@ -235,17 +234,56 @@ function chiudiModaleModifica() {
     document.getElementById('modal-modifica').classList.add('hidden'); 
 }
 
+// 2. MODIFICA APPUNTAMENTO: Salva i nuovi dati ed invia l'email di MODIFICA al cliente
 async function salvaModifiche(btn) {
     btn.disabled = true;
-    await _supabase.from('appuntamenti').update({ 
-        agente_id: document.getElementById('edit-agent').value, 
-        data: document.getElementById('edit-date').value, 
-        ora: document.getElementById('edit-time').value 
-    }).eq('id', document.getElementById('edit-app-id').value);
+    const appId = document.getElementById('edit-app-id').value;
+    const nuovoAgenteId = document.getElementById('edit-agent').value;
+    const nuovaData = document.getElementById('edit-date').value;
+    const nuovaOra = document.getElementById('edit-time').value;
+
+    const appuntamento = tuttiGliAppuntamenti.find(a => String(a.id) === String(appId));
+
+    const { error } = await _supabase.from('appuntamenti').update({ 
+        agente_id: nuovoAgenteId, 
+        data: nuovaData, 
+        ora: nuovaOra 
+    }).eq('id', appId);
     
+    if (error) {
+        btn.disabled = false;
+        return Swal.fire({ icon: 'error', title: 'Errore', text: error.message });
+    }
+
+    // Recupera il nome del nuovo consulente per l'email
+    const agenteObj = tuttiGliAgenti.find(a => String(a.id) === String(nuovoAgenteId));
+    const nomeNuovoAgente = agenteObj ? agenteObj.nome : 'Consulente CAF';
+
+    // Se il cliente ha un'email, inviamo la notifica di MODIFICA
+    if (appuntamento && appuntamento.email_cliente) {
+        try {
+            await fetch('/api/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tipo: 'MODIFICA_CLIENTE',
+                    nome: appuntamento.nome_cliente,
+                    email: appuntamento.email_cliente,
+                    servizio: appuntamento.servizi ? appuntamento.servizi.nome : 'Servizio CAF',
+                    agente: nomeNuovoAgente,
+                    data: nuovaData,
+                    ora: nuovaOra.substring(0, 5)
+                })
+            });
+            console.log("📩 Email di modifica inviata con successo al cliente!");
+        } catch (emailError) {
+            console.error("❌ ERRORE DI RETE DURANTE L'INVIO EMAIL MODIFICA:", emailError);
+        }
+    }
+
     chiudiModaleModifica(); 
     caricaDashboard(); 
-    Swal.fire({ icon: 'success', title: 'Aggiornato', showConfirmButton: false, timer: 1500 });
+    Swal.fire({ icon: 'success', title: 'Aggiornato', text: 'L\'appuntamento è stato modificato e il cliente è stato notificato!', showConfirmButton: false, timer: 2000 });
     btn.disabled = false;
 }
 

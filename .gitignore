@@ -1,3 +1,4 @@
 # Ignora file temporanei di Supabase e di sistema
+node_modules/
 supabase/.temp/
 .DS_Store

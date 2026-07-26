@@ -231,7 +231,6 @@ async function confermaPrenotazione() {
     const email = document.getElementById('user-email').value.trim(); 
     const privacyCheck = document.getElementById('accetta-privacy');
 
-    // 1. Controllo di validazione: l'email NON è obbligatoria
     if (!prenotazione.servizio_id || !prenotazione.agente_id || !prenotazione.data || !prenotazione.ora || !nome || !telefono || !privacyCheck.checked) {
         return Swal.fire({ 
             icon: 'warning', 
@@ -245,7 +244,7 @@ async function confermaPrenotazione() {
     btn.disabled = true; 
     btn.innerText = "Salvataggio...";
 
-    // 2. Inserimento nel database: stato 'in attesa'
+    // 1. Inserimento nel database Supabase
     const { error } = await _supabase.from('appuntamenti').insert({
         nome_cliente: nome, 
         telefono: telefono, 
@@ -263,10 +262,33 @@ async function confermaPrenotazione() {
         return Swal.fire({ icon: 'error', title: 'Errore', text: error.message, confirmButtonColor: '#416900' });
     }
 
+    // 2. Invio Email di notifica AL CAF
+    try {
+        const nomeServizio = document.getElementById('summary-service').innerText;
+        const nomeAgente = document.getElementById('summary-agent').innerText;
+
+        await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tipo: 'NUOVA_RICHIESTA_CAF',
+                nome: nome,
+                telefono: telefono,
+                email: email,
+                servizio: nomeServizio,
+                agente: nomeAgente,
+                data: prenotazione.data,
+                ora: prenotazione.ora
+            })
+        });
+        console.log("📩 Notifica nuova richiesta inviata con successo al CAF!");
+    } catch (emailError) {
+        console.error("❌ Errore durante l'invio dell'email al CAF:", emailError);
+    }
+
     btn.disabled = false; 
     btn.innerText = "Conferma Prenotazione";
 
-    // 3. Messaggio di successo per il cliente
     Swal.fire({ 
         icon: 'success', 
         title: 'Richiesta Inviata!', 
