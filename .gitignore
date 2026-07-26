@@ -1,0 +1,3 @@
+# Ignora file temporanei di Supabase e di sistema
+supabase/.temp/
+.DS_Store
