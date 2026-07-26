@@ -15,7 +15,7 @@ let prenotazione = {
 let tuttiGliAgenti = [];
 let tuttiIServizi = [];
 let tutteLeCompetenze = [];
-let tuttiIBlocchi = []; // NUOVO: Contiene i blocchi inseriti dall'admin
+let tuttiIBlocchi = []; // Contiene i blocchi inseriti dall'admin
 
 // Festività in cui il CAF è chiuso
 const festivitaItaliane = ['01-01', '01-06', '04-25', '05-01', '06-02', '08-15', '11-01', '12-08', '12-25', '12-26'];
@@ -46,7 +46,7 @@ async function inizializzaApp() {
                 const d = date.getDate().toString().padStart(2, '0');
                 if (festivitaItaliane.includes(`${m}-${d}`)) return true;
 
-                // 3. NUOVO: Blocco "Intera Giornata (Ferie / Chiusura Ufficio)" da Admin
+                // 3. Blocco "Intera Giornata (Ferie / Chiusura Ufficio)" da Admin
                 const dataCorrenteStr = `${date.getFullYear()}-${m}-${d}`;
                 const isUfficioChiuso = tuttiIBlocchi.some(b => 
                     b.data === dataCorrenteStr && 
@@ -72,13 +72,13 @@ async function caricaDatiBase() {
         _supabase.from('agenti').select('*').order('nome'),
         _supabase.from('servizi').select('*').order('nome'),
         _supabase.from('competenze').select('*'),
-        _supabase.from('blocchi').select('*') // Scarichiamo i blocchi dal database
+        _supabase.from('blocchi').select('*')
     ]);
     
     if (!resAgenti.error) tuttiGliAgenti = resAgenti.data;
     if (!resServizi.error) tuttiIServizi = resServizi.data;
     if (!resCompetenze.error) tutteLeCompetenze = resCompetenze.data;
-    if (!resBlocchi.error) tuttiIBlocchi = resBlocchi.data; // Salviamo i blocchi nella variabile globale
+    if (!resBlocchi.error) tuttiIBlocchi = resBlocchi.data;
 
     renderizzaAgenti();
 }
@@ -155,7 +155,7 @@ function selezionaServizio(id, nome) {
     caricaSlotDisponibili();
 }
 
-// 5. Gestione e Generazione degli Orari (Aggiornato con filtro blocchi ferie/orari)
+// 5. Gestione e Generazione degli Orari (Con filtro blocchi ferie/orari)
 async function caricaSlotDisponibili() {
     const container = document.getElementById('slots-container');
     
@@ -188,7 +188,6 @@ async function caricaSlotDisponibili() {
         '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
     ];
     
-    // NUOVO: Applichiamo il filtro escludendo gli orari che l'admin ha bloccato per questo giorno/agente
     const orariDisponibili = filtraOrariMancanti(orariStandard, prenotazione.data, prenotazione.agente_id, tuttiIBlocchi);
     
     if (orariDisponibili.length === 0) {
@@ -225,14 +224,14 @@ function selezionaOra(ora) {
     document.getElementById(`slot-${ora.replace(':','')}`).classList.add('bg-primary', 'text-white', 'border-primary');
 }
 
-// Salvataggio sul Database Supabase (Aggiornato: Email Opzionale)
+// Salvataggio sul Database Supabase (Email gestita in seguito dall'admin)
 async function confermaPrenotazione() {
     const nome = document.getElementById('user-name').value;
     const telefono = document.getElementById('user-phone').value;
-    const email = document.getElementById('user-email').value.trim(); // trim() rimuove eventuali spazi vuoti accidentali
+    const email = document.getElementById('user-email').value.trim(); 
     const privacyCheck = document.getElementById('accetta-privacy');
 
-    // 1. Controllo di validazione: l'email NON è nell'elenco dei campi obbligatori
+    // 1. Controllo di validazione: l'email NON è obbligatoria
     if (!prenotazione.servizio_id || !prenotazione.agente_id || !prenotazione.data || !prenotazione.ora || !nome || !telefono || !privacyCheck.checked) {
         return Swal.fire({ 
             icon: 'warning', 
@@ -246,11 +245,11 @@ async function confermaPrenotazione() {
     btn.disabled = true; 
     btn.innerText = "Salvataggio...";
 
-    // 2. Inserimento nel database: se l'email è vuota, salverà null
+    // 2. Inserimento nel database: stato 'in attesa'
     const { error } = await _supabase.from('appuntamenti').insert({
         nome_cliente: nome, 
         telefono: telefono, 
-        email_cliente: email || null, // Se email è vuota passa null a Supabase
+        email_cliente: email || null,
         servizio_id: prenotazione.servizio_id, 
         agente_id: prenotazione.agente_id,
         data: prenotazione.data, 
@@ -264,61 +263,23 @@ async function confermaPrenotazione() {
         return Swal.fire({ icon: 'error', title: 'Errore', text: error.message, confirmButtonColor: '#416900' });
     }
 
-    // 3. Invio Email: Viene eseguito SOLO SE l'utente ha inserito un'email valida
-    if (email) {
-        try {
-            const nomeServizio = document.getElementById('summary-service').innerText;
-            const nomeAgente = document.getElementById('summary-agent').innerText;
-
-            const emailResponse = await fetch('/api/send-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    nome: nome,
-                    email: email,
-                    servizio: nomeServizio,
-                    telefono: telefono,
-                    agente: nomeAgente,
-                    data: prenotazione.data,
-                    ora: prenotazione.ora
-                })
-            });
-
-            if (!emailResponse.ok) {
-                const erroreDettagli = await emailResponse.json();
-                console.error("❌ ERRORE SERVERLESS EMAIL:", erroreDettagli);
-            } else {
-                console.log("📩 Email inviata con successo tramite Resend!");
-            }
-
-        } catch (emailError) {
-            console.error("❌ ERRORE DI RETE CON LE EMAIL:", emailError);
-        }
-    } else {
-        console.log("ℹ️ Nessuna email inserita dal cliente: invio notifica ignorato.");
-    }
-
     btn.disabled = false; 
     btn.innerText = "Conferma Prenotazione";
 
-    // 4. Messaggio di successo al cliente
+    // 3. Messaggio di successo per il cliente
     Swal.fire({ 
         icon: 'success', 
-        title: 'Prenotazione Confermata!', 
-        text: 'I tuoi dati sono stati salvati correttamente. Ci vediamo al CAF!', 
+        title: 'Richiesta Inviata!', 
+        text: 'La tua richiesta di prenotazione è stata ricevuta. Riceverai un\'email di conferma non appena l\'appuntamento sarà approvato dall\'ufficio.', 
         confirmButtonColor: '#416900' 
     }).then(() => window.location.reload());
 }
 
 // =========================================================================
-// NUOVE FUNZIONI DI UTILITÀ PER IL FILTRO DEI BLOCCHI ORARI
+// FUNZIONI DI UTILITÀ PER IL FILTRO DEI BLOCCHI ORARI
 // =========================================================================
 
-// Funzione principale che esclude gli orari coperti da ferie o blocchi specifici
 function filtraOrariMancanti(orariStandard, dataSelezionata, agenteSelezionato, listaBlocchi) {
-    // Filtriamo i blocchi validi per la data scelta e che interessano o TUTTI (null) o l'agente specifico
     const blocchiDiOggi = listaBlocchi.filter(b => 
         b.data === dataSelezionata && 
         (b.agente_id === null || String(b.agente_id) === String(agenteSelezionato))
@@ -329,7 +290,6 @@ function filtraOrariMancanti(orariStandard, dataSelezionata, agenteSelezionato, 
     return orariStandard.filter(ora => {
         const oraInMinuti = convertiOraInMinuti(ora);
 
-        // Se l'orario del bottone cade dentro la fascia di un blocco, viene scartato
         const copertoDaBlocco = blocchiDiOggi.some(blocco => {
             const inizioMinuti = convertiOraInMinuti(blocco.ora_inizio);
             const fineMinuti = convertiOraInMinuti(blocco.ora_fine);
@@ -340,7 +300,6 @@ function filtraOrariMancanti(orariStandard, dataSelezionata, agenteSelezionato, 
     });
 }
 
-// Converte stringhe orario come "10:30" o "15:00:00" in minuti totali dall'inizio del giorno per confronti matematici
 function convertiOraInMinuti(stringaOra) {
     const parti = stringaOra.split(':');
     const ore = parseInt(parti[0], 10);
