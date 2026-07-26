@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
         
         // EMAIL DELL'UFFICIO CAF CHE RICEVE LE NOTIFICHE
         // (Nota: Durante i test con account gratuito Resend, usa la TUA email di registrazione a Resend)
-        const EMAIL_UFFICIO_CAF = 'info@cafuci.it'; 
+        const EMAIL_UFFICIO_CAF = 'uciavellino@gmail.com'; 
 
         const { tipo, nome, email, servizio, telefono, agente, data, ora } = req.body;
         const dataIT = data ? new Date(data).toLocaleDateString('it-IT') : '';
