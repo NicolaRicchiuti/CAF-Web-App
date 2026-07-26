@@ -1,7 +1,7 @@
 // =========================================================================
 // RIGA DI VERIFICA: Serve a verificare che il browser carichi la nuova versione
 // =========================================================================
-console.log("🚀 [SISTEMA] admin.js versione 2.0 caricata ed eseguita correttamente!");
+console.log("🚀 [SISTEMA] admin.js versione 2.2 caricata ed eseguita correttamente!");
 
 const SUPABASE_URL = 'https://vnpzggqebxcqbtwwwefv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZucHpnZ3FlYnhjcWJ0d3d3ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MzkyNzYsImV4cCI6MjA4NDQxNTI3Nn0.tYYlfFfvLgF7vMxjMKTF-3Gt1F_XEkB_2A4tL_OeM5Y';
@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function inizializzaDashboard() {
-    // Caricamento preventivo dei consulenti per le associazioni in memoria locale
     const { data: dataAgenti, error: errorAgenti } = await _supabase
         .from('agenti')
         .select('*')
@@ -39,13 +38,11 @@ async function inizializzaDashboard() {
     await caricaDashboard();
     await caricaBlocchi(); 
     
-    // Canale Realtime per gli appuntamenti dei clienti
     _supabase.channel('admin-live-appuntamenti')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'appuntamenti' }, () => {
         caricaDashboard();
     }).subscribe();
 
-    // Canale Realtime per le chiusure e le ferie
     _supabase.channel('admin-live-blocchi')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'blocchi' }, () => {
         caricaBlocchi();
@@ -120,9 +117,14 @@ function renderizzaTabella(lista) {
         }
         const dataIT = new Date(app.data).toLocaleDateString('it-IT');
         const oraIT = app.ora.substring(0, 5);
-        const messaggio = `Gentile ${app.nome_cliente}, ti confermiamo l'appuntamento al CAF UCI per il giorno ${dataIT} alle ore ${oraIT}. A presto!`;
-        const linkFallback = telPulito ? `https://wa.me/${telPulito}?text=${encodeURIComponent(messaggio)}` : '#';
         
+        const nomeServizio = app.servizi?.nome || 'Servizio CAF';
+        const nomeConsulente = app.agenti?.nome || 'Operatore CAF';
+
+        // NUOVO: Messaggio di riepilogo dettagliato per WhatsApp
+        const messaggio = `Gentile *${app.nome_cliente}*,\nti confermiamo il tuo appuntamento presso il *CAF UCI*! 📌\n\n📋 *RIEPILOGO PRENOTAZIONE*\n🔹 *Servizio:* ${nomeServizio}\n🔹 *Consulente:* ${nomeConsulente}\n📅 *Data:* ${dataIT}\n⏰ *Ora:* ${oraIT}\n\nTi aspettiamo in sede! Per qualsiasi informazione puoi rispondere a questo messaggio.`;
+        
+        const linkFallback = telPulito ? `https://wa.me/${telPulito}?text=${encodeURIComponent(messaggio)}` : '#';
         const linkFinale = app.link_whatsapp || linkFallback;
 
         return `
@@ -132,8 +134,8 @@ function renderizzaTabella(lista) {
                     <div class="text-[10px] text-zinc-400 font-medium">${app.telefono}</div>
                 </td>
                 <td class="px-8 py-5">
-                    <div class="text-xs font-bold text-zinc-600 uppercase">${app.servizi?.nome}</div>
-                    <div class="text-[10px] text-primary italic font-bold">${app.agenti?.nome}</div>
+                    <div class="text-xs font-bold text-zinc-600 uppercase">${nomeServizio}</div>
+                    <div class="text-[10px] text-primary italic font-bold">${nomeConsulente}</div>
                 </td>
                 <td class="px-8 py-5 font-bold text-zinc-600">
                     ${dataIT} <span class="text-zinc-300 mx-1">|</span> ${oraIT}
@@ -148,7 +150,6 @@ function renderizzaTabella(lista) {
                         ${app.stato === 'in attesa' ? `<button onclick="cambiaStato('${app.id}', 'confermato')" class="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all" title="Conferma"><span class="material-symbols-outlined">check_circle</span></button>` : ''}
                         
                         ${telPulito ? `
-                            <!-- target="whatsapp_chat" riutilizza sempre la stessa scheda -->
                             <a href="${linkFinale}" target="whatsapp_chat" rel="noopener" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all inline-flex items-center justify-center" title="Invia promemoria WhatsApp">
                                 <span class="material-symbols-outlined text-xl">chat</span>
                             </a>
@@ -162,12 +163,10 @@ function renderizzaTabella(lista) {
     }).join('');
 }
 
-// FUNZIONE AGGIORNATA: Cambia stato e invia email di conferma se presente l'indirizzo
+// Funzione per cambiare stato ed inviare email
 async function cambiaStato(id, nuovo) { 
-    // 1. Troviamo i dettagli dell'appuntamento salvato in memoria locale
     const appuntamento = tuttiGliAppuntamenti.find(a => String(a.id) === String(id));
 
-    // 2. Aggiorniamo lo stato nel database Supabase
     const { error } = await _supabase
         .from('appuntamenti')
         .update({ stato: nuovo })
@@ -177,7 +176,6 @@ async function cambiaStato(id, nuovo) {
         return Swal.fire({ icon: 'error', title: 'Errore', text: error.message });
     }
 
-    // 3. Se l'appuntamento viene confermato e il cliente ha fornito un'email, inviamo la notifica
     if (nuovo === 'confermato' && appuntamento && appuntamento.email_cliente) {
         try {
             const emailResponse = await fetch('/api/send-email', {
@@ -368,7 +366,6 @@ async function salvaBlocco(btn) {
     
     const agenteValore = document.getElementById('block-agent').value;
     
-    // Normalizzazione sicura degli input per evitare formati orari incompleti
     const inizioInput = document.getElementById('block-start').value;
     const fineInput = document.getElementById('block-end').value;
     
