@@ -2,18 +2,24 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// IMPOSTA QUI L'EMAIL DELL'UFFICIO CAF CHE RICEVERÀ LE NUOVE RICHIESTE
-const EMAIL_UFFICIO_CAF = 'uciavellino@gmail.com'; 
+// IMPOSTA QUI L'EMAIL DELL'UFFICIO CAF 
+// (Nota: Se sei in prova su Resend senza dominio verificato, usa la TUA email con cui ti sei iscritto a Resend)
+const EMAIL_UFFICIO_CAF = 'info@cafuci.it'; 
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Metodo non consentito' });
     }
 
-    const { tipo, nome, email, servizio, telefono, agente, data, ora } = req.body;
-
     try {
-        const dataIT = new Date(data).toLocaleDateString('it-IT');
+        // Controllo presenza Chiave API
+        if (!process.env.RESEND_API_KEY) {
+            return res.status(500).json({ error: 'Manca la variabile RESEND_API_KEY nelle impostazioni di Vercel.' });
+        }
+
+        const { tipo, nome, email, servizio, telefono, agente, data, ora } = req.body;
+        const dataIT = data ? new Date(data).toLocaleDateString('it-IT') : '';
+        
         let emailDestinatario = '';
         let oggettoEmail = '';
         let contenutoHtml = '';
@@ -72,17 +78,27 @@ export default async function handler(req, res) {
                 </ul>
                 <p>A presto!</p>
             `;
+        } else {
+            return res.status(400).json({ error: 'Tipo di email non valido' });
         }
 
-        const dataResponse = await resend.emails.send({
-            from: 'CAF UCI <onboarding@resend.dev>', // Sostituisci con il tuo dominio verificato su Resend in produzione
+        // Invio tramite Resend API
+        const response = await resend.emails.send({
+            from: 'CAF UCI <onboarding@resend.dev>',
             to: [emailDestinatario],
             subject: oggettoEmail,
             html: contenutoHtml,
         });
 
-        return res.status(200).json({ success: true, data: dataResponse });
+        if (response.error) {
+            console.error("❌ ERRORE RESEND:", response.error);
+            return res.status(400).json({ error: response.error.message || response.error });
+        }
+
+        return res.status(200).json({ success: true, data: response });
+
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        console.error("❌ ERRORE SERVERLESS CATCH:", error);
+        return res.status(500).json({ error: error.message || 'Errore interno del server' });
     }
 }

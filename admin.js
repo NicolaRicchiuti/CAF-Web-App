@@ -1,7 +1,7 @@
 // =========================================================================
 // RIGA DI VERIFICA: Serve a verificare che il browser carichi la nuova versione
 // =========================================================================
-console.log("🚀 [SISTEMA] admin.js versione 2.3 (Flusso Email Completo) caricata ed eseguita correttamente!");
+console.log("🚀 [SISTEMA] admin.js versione 2.4 (Gestione Sicura Risposte Serverless) caricata ed eseguita correttamente!");
 
 const SUPABASE_URL = 'https://vnpzggqebxcqbtwwwefv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZucHpnZ3FlYnhjcWJ0d3d3ZWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MzkyNzYsImV4cCI6MjA4NDQxNTI3Nn0.tYYlfFfvLgF7vMxjMKTF-3Gt1F_XEkB_2A4tL_OeM5Y';
@@ -193,11 +193,19 @@ async function cambiaStato(id, nuovo) {
                 })
             });
 
+            // Lettura sicura del testo per evitare eccezioni di parsing JSON
+            const testoRisposta = await emailResponse.text();
+            let datiRisposta;
+            try {
+                datiRisposta = JSON.parse(testoRisposta);
+            } catch (e) {
+                datiRisposta = testoRisposta;
+            }
+
             if (!emailResponse.ok) {
-                const erroreDettagli = await emailResponse.json();
-                console.error("❌ ERRORE SERVERLESS EMAIL:", erroreDettagli);
+                console.error(`❌ ERRORE SERVERLESS EMAIL (HTTP ${emailResponse.status}):`, datiRisposta);
             } else {
-                console.log("📩 Email di conferma inviata con successo al cliente!");
+                console.log("📩 Email di conferma inviata con successo al cliente!", datiRisposta);
             }
 
         } catch (emailError) {
@@ -262,7 +270,7 @@ async function salvaModifiche(btn) {
     // Se il cliente ha un'email, inviamo la notifica di MODIFICA
     if (appuntamento && appuntamento.email_cliente) {
         try {
-            await fetch('/api/send-email', {
+            const emailResponse = await fetch('/api/send-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -275,7 +283,22 @@ async function salvaModifiche(btn) {
                     ora: nuovaOra.substring(0, 5)
                 })
             });
-            console.log("📩 Email di modifica inviata con successo al cliente!");
+
+            // Lettura sicura della risposta per la notifica di modifica
+            const testoRisposta = await emailResponse.text();
+            let datiRisposta;
+            try {
+                datiRisposta = JSON.parse(testoRisposta);
+            } catch (e) {
+                datiRisposta = testoRisposta;
+            }
+
+            if (!emailResponse.ok) {
+                console.error(`❌ ERRORE SERVERLESS EMAIL MODIFICA (HTTP ${emailResponse.status}):`, datiRisposta);
+            } else {
+                console.log("📩 Email di modifica inviata con successo al cliente!", datiRisposta);
+            }
+
         } catch (emailError) {
             console.error("❌ ERRORE DI RETE DURANTE L'INVIO EMAIL MODIFICA:", emailError);
         }
