@@ -1,10 +1,12 @@
 // Aumenta questo numero ogni volta che fai un aggiornamento importante!
-const CACHE_NAME = 'caf-uci-v7'; 
+const CACHE_NAME = 'caf-uci-v8'; 
 
 const ASSETS = [
   './',
   './index.html',
-  './script.js',
+  './admin.html',
+  './script.js?v=2.4',
+  './admin.js?v=2.4',
   './style.css',
   './logoUci.png',
   './manifest.json'
@@ -36,8 +38,15 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Gestisce le richieste (pesca dalla cache se c'è, altrimenti va online)
+// GESTIONE RICHIESTE: Pesca dalla cache, ma IGNORA le chiamate al database e alle email
 self.addEventListener('fetch', (e) => {
+  // 1. REGOLA DI SICUREZZA: Ignora le chiamate API (Resend/Vercel) e Supabase
+  // In questo modo i dati in tempo reale non si "incastrano" nella memoria del telefono
+  if (e.request.url.includes('supabase.co') || e.request.url.includes('/api/')) {
+    return; // Il Service Worker si fa da parte e lascia andare la chiamata su Internet
+  }
+
+  // 2. COMPORTAMENTO NORMALE: Cerca nella cache per velocizzare il sito
   e.respondWith(
     caches.match(e.request).then((response) => {
       return response || fetch(e.request);
