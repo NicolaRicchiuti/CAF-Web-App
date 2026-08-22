@@ -114,33 +114,33 @@
         </div>
     </div>
 
-<!-- SEZIONE DOVE SIAMO CON MAPPA INCORPORATA -->
-<section class="max-w-4xl mx-auto my-8 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+<!-- SEZIONE DOVE SIAMO A LARGHEZZA INTERA -->
+<section class="w-full bg-white border-t border-slate-200 mt-12 flex flex-col lg:flex-row">
   
-  <!-- Intestazione con Info e Pulsante -->
-  <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-    <div class="flex items-start space-x-4">
-      <div class="p-3 bg-emerald-50 text-emerald-700 rounded-xl mt-1">
+  <!-- Colonna Sinistra: Info e Pulsante (35% su desktop) -->
+  <div class="w-full lg:w-[35%] p-8 lg:p-16 flex flex-col justify-center items-start bg-slate-50">
+    <div class="flex items-start space-x-4 mb-8">
+      <div class="p-3 bg-emerald-100 text-emerald-700 rounded-xl mt-1 shadow-sm">
         <span class="material-symbols-outlined text-3xl">location_on</span>
       </div>
       <div>
-        <h3 class="text-xl font-bold text-slate-800 mb-1">Dove Siamo</h3>
-        <p class="text-slate-700 font-semibold">CAF UCI Avella</p>
-        <p class="text-slate-500 text-sm">Via Carmignano 5, 83021 Avella (AV)</p>
+        <h3 class="text-3xl font-bold text-slate-800 mb-2">Dove Siamo</h3>
+        <p class="text-xl text-slate-700 font-semibold mb-1">CAF UCI Avella</p>
+        <p class="text-slate-500 text-lg">Via Carmignano 5, 83021 Avella (AV)</p>
       </div>
     </div>
     
     <a href="https://www.google.com/maps/place/Via+Carmignano,+5,+83021+Avella+AV/@40.9596738,14.5966753,17z/data=!3m1!4b1!4m10!1m2!2m1!1scaf+via+carmignano+5+avella+!3m6!1s0x133bb4ef74f971f9:0x4f2eebb286aa1a0b!8m2!3d40.9596738!4d14.5992502!15sChtjYWYgdmlhIGNhcm1pZ25hbm8gNSBhdmVsbGGSAQpzdWJwcmVtaXNl4AEA!16s%2Fg%2F11gxrt3650?entry=ttu" 
        target="_blank" 
        rel="noopener noreferrer" 
-       class="w-full md:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl flex items-center justify-center space-x-2 transition-colors shadow-sm">
-      <span class="material-symbols-outlined text-xl">navigation</span>
+       class="w-full lg:w-auto px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl flex items-center justify-center space-x-3 transition-colors shadow-md text-lg">
+      <span class="material-symbols-outlined text-2xl">navigation</span>
       <span>Avvia Navigatore</span>
     </a>
   </div>
 
-  <!-- Finestra della Mappa (Iframe) -->
-  <div class="w-full h-96 relative">
+  <!-- Colonna Destra: Mappa (65% su desktop) -->
+  <div class="w-full lg:w-[65%] min-h-[400px] lg:min-h-[500px] relative">
     <iframe 
       src="https://maps.google.com/maps?q=Via+Carmignano+5,+83021+Avella+AV&t=&z=16&ie=UTF8&iwloc=&output=embed" 
       class="absolute top-0 left-0 w-full h-full border-0" 
@@ -182,6 +182,6 @@
     </script>
     
     <!-- Cambia la riga dello script in fondo alla pagina -->
-<script src="script.js?v=2.7.1"></script>
+<script src="script.js?v=2.8"></script>
 </body>
 </html>
