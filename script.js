@@ -170,12 +170,13 @@ async function caricaSlotDisponibili() {
     container.classList.remove('hidden');
     container.innerHTML = '<p class="col-span-2 text-center text-sm text-zinc-500 py-4">Verifica disponibilità in corso...</p>';
     
-    // Connessione per verificare gli appuntamenti già presi dai clienti
+    // Connessione per verificare gli appuntamenti già presi dai clienti (SIA in attesa CHE confermati)
     const { data: appuntamentiOccupati, error } = await _supabase
         .from('appuntamenti')
         .select('ora')
         .eq('agente_id', prenotazione.agente_id)
-        .eq('data', prenotazione.data);
+        .eq('data', prenotazione.data)
+        .in('stato', ['confermato', 'in attesa']);
         
     let orariGiaPrenotati = [];
     if (!error && appuntamentiOccupati) {
