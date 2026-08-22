@@ -1,5 +1,5 @@
 // Aumenta questo numero ogni volta che fai un aggiornamento importante!
-const CACHE_NAME = 'caf-uci-v11'; 
+const CACHE_NAME = 'caf-uci-v11.1'; 
 
 const ASSETS = [
   './',
