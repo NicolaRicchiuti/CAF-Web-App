@@ -1,13 +1,12 @@
-// 1. Aumenta il numero di versione
-const CACHE_NAME = 'caf-uci-v15'; 
+const CACHE_NAME = 'caf-uci-v17'; 
 
 const ASSETS = [
   './',
   './index.html',
   './admin.html',
-  './script.js?v=2.9',
+  './script.js?v=2.12',
   './admin.js?v=2.4',
-  './style.css', // 2. Aggiungi la versione anche qui per farla riconoscere!
+  './style.css?v=3.0',
   './logoUci.png',
   './manifest.json'
 ];
