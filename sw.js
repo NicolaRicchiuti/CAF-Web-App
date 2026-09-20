@@ -7,7 +7,7 @@ const ASSETS = [
   './admin.html',
   './script.js?v=2.9',
   './admin.js?v=2.4',
-  './style.css?v=1.1', // 2. Aggiungi la versione anche qui per farla riconoscere!
+  './style.css', // 2. Aggiungi la versione anche qui per farla riconoscere!
   './logoUci.png',
   './manifest.json'
 ];
