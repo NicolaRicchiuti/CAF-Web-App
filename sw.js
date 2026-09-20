@@ -1,5 +1,5 @@
 // 1. Aumenta il numero di versione
-const CACHE_NAME = 'caf-uci-v14'; 
+const CACHE_NAME = 'caf-uci-v15'; 
 
 const ASSETS = [
   './',
