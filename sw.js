@@ -1,4 +1,4 @@
-const CACHE_NAME = 'caf-uci-v20'; 
+const CACHE_NAME = 'caf-uci-v21'; 
 
 const ASSETS = [
   './',
