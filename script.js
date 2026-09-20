@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
 async function inizializzaApp() {
     await caricaDatiBase();
 
+    // 1. Calcoliamo la data di domani
+    const dataDiDomani = new Date();
+    dataDiDomani.setDate(dataDiDomani.getDate() + 1);
+
     // Inizializzazione Calendario con ALT_INPUT Nativo
     flatpickr("#booking-date", {
         locale: "it", 
@@ -34,7 +38,7 @@ async function inizializzaApp() {
         altInput: true, 
         altFormat: "j F Y", 
         altInputClass: "w-full bg-zinc-50 border border-zinc-200 hover:border-primary text-primary tracking-wide transition-colors rounded-2xl py-4 px-4 text-center font-bold cursor-pointer outline-none focus:ring-2 focus:ring-primary",
-        minDate: "today", 
+        minDate: dataDiDomani, // <--- Modificato: ora il minimo è domani
         disableMobile: true,
         disable: [
             function(date) {
